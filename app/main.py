@@ -9,16 +9,20 @@ import os
 import uuid
 import secrets
 import asyncio
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, BackgroundTasks
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from . import database as db
 from .transcription import transcribe_audio, transcribe_pending_chunks, is_whisper_available
@@ -30,13 +34,25 @@ from .voice_clone import get_voice_clone_status_dict
 from .avatar import get_avatar_status_dict, count_user_photos, list_user_photos, save_user_photo, PHOTOS_DIR
 from .soul import get_soul_status_dict
 
+# ----- Logging Configuration -----
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("instabio")
+
+# ----- Rate Limiter -----
+limiter = Limiter(key_func=get_remote_address)
+
 # ----- Configuration -----
 BASE_DIR = Path(__file__).parent.parent
 AUDIO_DIR = BASE_DIR / "data" / "audio"
+PHOTOS_DIR_DATA = BASE_DIR / "data" / "photos"
 STATIC_DIR = BASE_DIR / "static"
 
 # Ensure directories exist
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+PHOTOS_DIR_DATA.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 # ----- Lifespan Events -----
@@ -77,6 +93,10 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+# Rate limiter setup
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS for local development
 app.add_middleware(
@@ -183,14 +203,18 @@ async def health():
     }
 
 @app.post("/api/register", response_model=RegisterResponse)
-async def register(request: RegisterRequest):
+@limiter.limit("5/minute")
+async def register(data: RegisterRequest, request: Request):
     """
     Register a new user.
     For MVP: simple name + email, no password required.
     Returns a session token for subsequent requests.
+    Rate limited to 5 requests per minute per IP.
     """
+    logger.info(f"Registration attempt for email: {data.email}")
+    
     # Check if email already exists
-    existing = await db.get_user_by_email(request.email)
+    existing = await db.get_user_by_email(data.email)
     if existing:
         # For MVP, just return existing user's token
         # In production, send magic link email
@@ -208,9 +232,9 @@ async def register(request: RegisterRequest):
     # Create user
     try:
         user_id = await db.create_user(
-            first_name=request.first_name,
-            birth_year=request.birth_year,
-            email=request.email,
+            first_name=data.first_name,
+            birth_year=data.birth_year,
+            email=data.email,
             session_token=token
         )
     except Exception as e:
@@ -220,8 +244,8 @@ async def register(request: RegisterRequest):
         success=True,
         token=token,
         user_id=user_id,
-        first_name=request.first_name,
-        message=f"Welcome, {request.first_name}! Your story begins now."
+        first_name=data.first_name,
+        message=f"Welcome, {data.first_name}! Your story begins now."
     )
 
 @app.post("/api/session/start")
@@ -367,14 +391,6 @@ def format_duration(seconds: float) -> str:
         return f"{minutes}m {secs}s"
     else:
         return f"{secs}s"
-
-# ----- Progress Page -----
-
-@app.get("/progress")
-async def progress():
-    """Serve the progress tracking page."""
-    return FileResponse(STATIC_DIR / "progress.html")
-
 
 # ----- Voice Clone, Avatar, Soul Status Endpoints -----
 
