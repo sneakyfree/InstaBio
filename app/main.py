@@ -22,6 +22,13 @@ from pydantic import BaseModel, EmailStr
 
 from . import database as db
 from .transcription import transcribe_audio, transcribe_pending_chunks, is_whisper_available
+from .entity_extraction import get_extractor, ExtractionResult, build_timeline
+from .biography import get_biography_generator, BiographyStyle
+from .journal import get_journal_generator
+from .llm_client import get_llm_client, test_connection
+from .voice_clone import get_voice_clone_status_dict
+from .avatar import get_avatar_status_dict, count_user_photos, list_user_photos, save_user_photo, PHOTOS_DIR
+from .soul import get_soul_status_dict
 
 # ----- Configuration -----
 BASE_DIR = Path(__file__).parent.parent
@@ -150,6 +157,21 @@ async def record():
 async def vault():
     """Serve the vault page."""
     return FileResponse(STATIC_DIR / "vault.html")
+
+@app.get("/biography")
+async def biography_page():
+    """Serve the biography viewer page."""
+    return FileResponse(STATIC_DIR / "biography.html")
+
+@app.get("/journal")
+async def journal_page():
+    """Serve the journal viewer page."""
+    return FileResponse(STATIC_DIR / "journal.html")
+
+@app.get("/progress")
+async def progress_page():
+    """Serve the progress dashboard page."""
+    return FileResponse(STATIC_DIR / "progress.html")
 
 @app.get("/api/health")
 async def health():
@@ -345,6 +367,610 @@ def format_duration(seconds: float) -> str:
         return f"{minutes}m {secs}s"
     else:
         return f"{secs}s"
+
+# ----- Progress Page -----
+
+@app.get("/progress")
+async def progress():
+    """Serve the progress tracking page."""
+    return FileResponse(STATIC_DIR / "progress.html")
+
+
+# ----- Voice Clone, Avatar, Soul Status Endpoints -----
+
+@app.get("/api/voice-clone/status")
+async def get_voice_clone_status(authorization: str = Header(None)):
+    """Get voice clone quality status for the current user."""
+    user = await get_current_user(authorization)
+    sessions = await db.get_user_sessions(user['id'])
+    
+    # Calculate total recording hours
+    total_seconds = sum(s['total_duration_seconds'] for s in sessions)
+    total_hours = total_seconds / 3600
+    
+    status = get_voice_clone_status_dict(total_hours)
+    return {"success": True, **status}
+
+
+@app.get("/api/avatar/status")
+async def get_avatar_status(authorization: str = Header(None)):
+    """Get avatar readiness status for the current user."""
+    user = await get_current_user(authorization)
+    
+    # Get photo count
+    photos_count = await count_user_photos(user['id'])
+    
+    # Get video hours (recordings marked as video)
+    # For now, we don't have video marking yet, so default to 0
+    video_hours = await db.get_user_video_hours(user['id']) if hasattr(db, 'get_user_video_hours') else 0.0
+    
+    status = get_avatar_status_dict(photos_count, video_hours)
+    return {"success": True, **status}
+
+
+@app.get("/api/soul/status")
+async def get_soul_status(authorization: str = Header(None)):
+    """Get Soul readiness status for the current user."""
+    user = await get_current_user(authorization)
+    sessions = await db.get_user_sessions(user['id'])
+    
+    # Calculate total recording hours
+    total_seconds = sum(s['total_duration_seconds'] for s in sessions)
+    total_hours = total_seconds / 3600
+    
+    # Get photo count for avatar status
+    photos_count = await count_user_photos(user['id'])
+    
+    # Voice clone is ready if we have 1+ hours
+    voice_clone_ready = total_hours >= 1.0
+    
+    # Avatar is ready if we have photos
+    avatar_ready = photos_count >= 1
+    
+    # Biography status (placeholder - would come from biography module)
+    biography_status = 'none'
+    biography_chapters_ready = 0
+    biography_chapters_total = 5
+    
+    # Check if we have enough recordings to generate biography
+    if total_hours >= 2:
+        biography_status = 'processing'
+        biography_chapters_ready = min(int(total_hours / 2), 5)
+    if total_hours >= 10 and biography_chapters_ready >= 5:
+        biography_status = 'ready'
+    
+    status = get_soul_status_dict(
+        recording_hours=total_hours,
+        biography_status=biography_status,
+        biography_chapters_ready=biography_chapters_ready,
+        biography_chapters_total=biography_chapters_total,
+        voice_clone_ready=voice_clone_ready,
+        avatar_ready=avatar_ready,
+    )
+    return {"success": True, **status}
+
+
+@app.get("/api/products/status")
+async def get_products_status(authorization: str = Header(None)):
+    """Get unified status overview of all 5 InstaBio products."""
+    user = await get_current_user(authorization)
+    sessions = await db.get_user_sessions(user['id'])
+    transcripts = await db.get_user_transcripts(user['id'])
+    
+    # Recording stats
+    total_seconds = sum(s['total_duration_seconds'] for s in sessions)
+    total_hours = total_seconds / 3600
+    
+    # Photo count
+    photos_count = await count_user_photos(user['id'])
+    
+    # Video hours (placeholder)
+    video_hours = 0.0
+    
+    # Voice clone status
+    voice_status = get_voice_clone_status_dict(total_hours)
+    
+    # Avatar status
+    avatar_status = get_avatar_status_dict(photos_count, video_hours)
+    
+    # Biography status (placeholder logic)
+    biography_status = 'none'
+    biography_chapters_ready = 0
+    biography_chapters_total = 5
+    if total_hours >= 2:
+        biography_status = 'processing'
+        biography_chapters_ready = min(int(total_hours / 2), 5)
+    if total_hours >= 10:
+        biography_status = 'ready'
+        biography_chapters_ready = 5
+    
+    # Journal entries (estimate from transcripts)
+    journal_entries = len(transcripts)
+    journal_status = 'ready' if journal_entries > 0 else 'none'
+    
+    # Soul status
+    voice_clone_ready = total_hours >= 1.0
+    avatar_ready = photos_count >= 1
+    soul_status = get_soul_status_dict(
+        recording_hours=total_hours,
+        biography_status=biography_status,
+        biography_chapters_ready=biography_chapters_ready,
+        biography_chapters_total=biography_chapters_total,
+        voice_clone_ready=voice_clone_ready,
+        avatar_ready=avatar_ready,
+    )
+    
+    return {
+        "success": True,
+        "user": {
+            "first_name": user['first_name'],
+            "birth_year": user['birth_year'],
+        },
+        "recording": {
+            "hours": round(total_hours, 2),
+            "sessions": len(sessions),
+            "total_chunks": sum(s['chunk_count'] for s in sessions),
+        },
+        "biography": {
+            "status": biography_status,
+            "chapters_ready": biography_chapters_ready,
+            "chapters_total": biography_chapters_total,
+        },
+        "journal": {
+            "status": journal_status,
+            "entries": journal_entries,
+        },
+        "voice_clone": {
+            "tier": voice_status['tier'],
+            "tier_name": voice_status['tier_name'],
+            "quality_pct": voice_status['quality_pct'],
+            "hours_to_next_tier": voice_status['hours_to_next_tier'],
+            "is_ready": voice_status['is_ready'],
+        },
+        "avatar": {
+            "tier": avatar_status['tier'],
+            "tier_name": avatar_status['tier_name'],
+            "quality_pct": avatar_status['quality_pct'],
+            "photos": avatar_status['photos_uploaded'],
+            "is_ready": avatar_status['is_ready'],
+        },
+        "soul": {
+            "readiness_pct": soul_status['readiness_pct'],
+            "tier": soul_status['tier'],
+            "requirements_met": soul_status['requirements_met'],
+            "is_ready": soul_status['is_ready'],
+            "next_step": soul_status['next_step'],
+        },
+    }
+
+
+# ----- Photo Upload Endpoints -----
+
+@app.post("/api/photo/upload")
+async def upload_photo(
+    photo: UploadFile = File(...),
+    authorization: str = Header(None)
+):
+    """Upload a photo for avatar creation."""
+    user = await get_current_user(authorization)
+    
+    # Validate file type
+    allowed_types = {'image/jpeg', 'image/png', 'image/webp', 'image/heic'}
+    if photo.content_type and photo.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only JPEG, PNG, WEBP, and HEIC images are allowed")
+    
+    # Read and save photo
+    content = await photo.read()
+    
+    # Limit file size (10MB)
+    max_size = 10 * 1024 * 1024
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail="Photo too large. Maximum size is 10MB")
+    
+    result = await save_user_photo(user['id'], photo.filename or "photo.jpg", content)
+    
+    # Get updated photo count
+    photos_count = await count_user_photos(user['id'])
+    
+    return {
+        "success": True,
+        "message": f"Photo uploaded! You now have {photos_count} photo(s).",
+        "photo": result,
+        "total_photos": photos_count,
+    }
+
+
+@app.get("/api/photos")
+async def get_photos(authorization: str = Header(None)):
+    """List all photos for the current user."""
+    user = await get_current_user(authorization)
+    
+    photos = await list_user_photos(user['id'])
+    
+    return {
+        "success": True,
+        "photos": photos,
+        "total_count": len(photos),
+    }
+
+
+@app.get("/api/photos/{user_id}/{filename}")
+async def serve_photo(user_id: int, filename: str, authorization: str = Header(None)):
+    """Serve a user's photo."""
+    user = await get_current_user(authorization)
+    
+    # Security: only allow users to access their own photos
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    file_path = PHOTOS_DIR / str(user_id) / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Photo not found")
+    
+    return FileResponse(file_path)
+
+
+@app.post("/api/recording/video")
+async def mark_recording_video(
+    session_uuid: str = Form(...),
+    is_video: bool = Form(True),
+    authorization: str = Header(None)
+):
+    """Mark a recording session as video (face on camera)."""
+    user = await get_current_user(authorization)
+    
+    # Verify session belongs to user
+    session = await db.get_session_by_uuid(session_uuid)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session['user_id'] != user['id']:
+        raise HTTPException(status_code=403, detail="Session does not belong to you")
+    
+    # Update session (would need database schema update)
+    # For now, just acknowledge
+    return {
+        "success": True,
+        "message": f"Session marked as {'video' if is_video else 'audio only'}",
+        "session_uuid": session_uuid,
+        "is_video": is_video,
+    }
+
+
+# ----- Story Processing API -----
+
+# In-memory storage for processing status (use database in production)
+_processing_status: dict = {}
+_entities_cache: dict = {}
+_timeline_cache: dict = {}
+_biography_cache: dict = {}
+_journal_cache: dict = {}
+
+@app.post("/api/process")
+async def trigger_processing(
+    background_tasks: BackgroundTasks,
+    authorization: str = Header(None)
+):
+    """
+    Trigger the processing pipeline for a user's transcripts.
+    Runs entity extraction, biography, and journal generation in background.
+    """
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    # Check if already processing
+    if user_id in _processing_status and _processing_status[user_id].get("status") == "processing":
+        return {
+            "success": True,
+            "status": "already_processing",
+            "message": "Your story is already being processed."
+        }
+    
+    # Start processing in background
+    _processing_status[user_id] = {
+        "status": "processing",
+        "progress": 0,
+        "stage": "starting",
+        "started_at": datetime.utcnow().isoformat()
+    }
+    
+    background_tasks.add_task(run_processing_pipeline, user_id, user['first_name'])
+    
+    return {
+        "success": True,
+        "status": "started",
+        "message": "Processing started. Check /api/progress for updates."
+    }
+
+async def run_processing_pipeline(user_id: int, user_name: str):
+    """Run the full processing pipeline for a user."""
+    try:
+        # Stage 1: Get transcripts
+        _processing_status[user_id]["stage"] = "fetching_transcripts"
+        _processing_status[user_id]["progress"] = 10
+        
+        transcripts = await db.get_user_transcripts(user_id)
+        
+        if not transcripts:
+            _processing_status[user_id] = {
+                "status": "complete",
+                "progress": 100,
+                "stage": "no_transcripts",
+                "message": "No transcripts to process. Record some memories first!"
+            }
+            return
+        
+        # Stage 2: Entity extraction
+        _processing_status[user_id]["stage"] = "extracting_entities"
+        _processing_status[user_id]["progress"] = 20
+        
+        extractor = get_extractor()
+        extraction_results = []
+        
+        for i, t in enumerate(transcripts):
+            result = await extractor.extract(
+                transcript=t['text'],
+                session_id=t.get('session_uuid')
+            )
+            extraction_results.append(result)
+            _processing_status[user_id]["progress"] = 20 + int((i / len(transcripts)) * 20)
+        
+        # Merge all extractions
+        merged_extraction = extractor.merge_results(extraction_results)
+        _entities_cache[user_id] = merged_extraction.to_dict()
+        
+        # Stage 3: Build timeline
+        _processing_status[user_id]["stage"] = "building_timeline"
+        _processing_status[user_id]["progress"] = 45
+        
+        timeline = await build_timeline(merged_extraction.events, merged_extraction.dates)
+        _timeline_cache[user_id] = timeline
+        
+        # Stage 4: Generate biography
+        _processing_status[user_id]["stage"] = "generating_biography"
+        _processing_status[user_id]["progress"] = 55
+        
+        bio_generator = get_biography_generator()
+        transcript_dicts = [{"text": t['text'], "session_id": t.get('session_uuid')} for t in transcripts]
+        
+        biography = await bio_generator.generate_biography(
+            user_name=user_name,
+            transcripts=transcript_dicts,
+            extraction=merged_extraction,
+            timeline=timeline,
+            style=BiographyStyle.POLISHED
+        )
+        _biography_cache[user_id] = biography.to_dict()
+        
+        _processing_status[user_id]["progress"] = 75
+        
+        # Stage 5: Generate journal
+        _processing_status[user_id]["stage"] = "generating_journal"
+        _processing_status[user_id]["progress"] = 80
+        
+        journal_generator = get_journal_generator()
+        journal = await journal_generator.generate_journal(
+            user_name=user_name,
+            extraction=merged_extraction,
+            timeline=timeline,
+            transcripts=transcript_dicts
+        )
+        _journal_cache[user_id] = journal.to_dict()
+        
+        # Complete
+        _processing_status[user_id] = {
+            "status": "complete",
+            "progress": 100,
+            "stage": "complete",
+            "completed_at": datetime.utcnow().isoformat(),
+            "stats": {
+                "transcripts_processed": len(transcripts),
+                "entities_extracted": {
+                    "people": len(merged_extraction.people),
+                    "places": len(merged_extraction.places),
+                    "events": len(merged_extraction.events)
+                },
+                "chapters_generated": len(biography.chapters),
+                "journal_entries": len(journal.entries)
+            }
+        }
+        
+    except Exception as e:
+        _processing_status[user_id] = {
+            "status": "error",
+            "progress": 0,
+            "stage": "error",
+            "error": str(e)
+        }
+
+@app.get("/api/progress")
+async def get_progress(authorization: str = Header(None)):
+    """Get processing progress for the current user."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _processing_status:
+        return {
+            "success": True,
+            "status": "not_started",
+            "progress": 0,
+            "stage": "not_started",
+            "message": "No processing started yet. Use POST /api/process to begin."
+        }
+    
+    return {
+        "success": True,
+        **_processing_status[user_id]
+    }
+
+@app.get("/api/entities")
+async def get_entities(authorization: str = Header(None)):
+    """Get extracted entities for the current user."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _entities_cache:
+        return {
+            "success": False,
+            "message": "No entities extracted yet. Run POST /api/process first."
+        }
+    
+    return {
+        "success": True,
+        "entities": _entities_cache[user_id]
+    }
+
+@app.get("/api/timeline")
+async def get_timeline(authorization: str = Header(None)):
+    """Get chronological timeline for the current user."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _timeline_cache:
+        return {
+            "success": False,
+            "message": "No timeline generated yet. Run POST /api/process first."
+        }
+    
+    return {
+        "success": True,
+        "timeline": _timeline_cache[user_id]
+    }
+
+@app.get("/api/biography")
+async def get_biography(
+    style: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    """Get generated biography for the current user."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    # Check processing status
+    if user_id in _processing_status:
+        status = _processing_status[user_id]
+        if status.get("status") == "processing":
+            return {
+                "success": True,
+                "status": "processing",
+                "progress": status.get("progress", 0),
+                "stage": status.get("stage", "unknown"),
+                "message": "Your biography is being generated..."
+            }
+    
+    if user_id not in _biography_cache:
+        return {
+            "success": False,
+            "message": "No biography generated yet. Run POST /api/process first."
+        }
+    
+    return {
+        "success": True,
+        "biography": _biography_cache[user_id]
+    }
+
+@app.get("/api/biography/chapter/{chapter_number}")
+async def get_biography_chapter(
+    chapter_number: int,
+    authorization: str = Header(None)
+):
+    """Get a specific chapter from the biography."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _biography_cache:
+        return {
+            "success": False,
+            "message": "No biography generated yet."
+        }
+    
+    chapters = _biography_cache[user_id].get("chapters", [])
+    
+    for chapter in chapters:
+        if chapter.get("number") == chapter_number:
+            return {
+                "success": True,
+                "chapter": chapter
+            }
+    
+    raise HTTPException(status_code=404, detail=f"Chapter {chapter_number} not found")
+
+@app.get("/api/journal")
+async def get_journal(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    """Get journal entries, optionally filtered by date range."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _journal_cache:
+        return {
+            "success": False,
+            "message": "No journal generated yet. Run POST /api/process first."
+        }
+    
+    journal = _journal_cache[user_id]
+    entries = journal.get("entries", [])
+    
+    # Filter by date range if specified
+    if start_date or end_date:
+        from .journal import get_journal_generator
+        jg = get_journal_generator()
+        
+        if start_date:
+            start_key = jg._sort_key(start_date)
+            entries = [e for e in entries if jg._sort_key(e["date"]) >= start_key]
+        
+        if end_date:
+            end_key = jg._sort_key(end_date)
+            entries = [e for e in entries if jg._sort_key(e["date"]) <= end_key]
+    
+    return {
+        "success": True,
+        "journal": {
+            **journal,
+            "entries": entries
+        }
+    }
+
+@app.get("/api/journal/{date}")
+async def get_journal_entry(
+    date: str,
+    authorization: str = Header(None)
+):
+    """Get a specific journal entry by date."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _journal_cache:
+        return {
+            "success": False,
+            "message": "No journal generated yet."
+        }
+    
+    entries = _journal_cache[user_id].get("entries", [])
+    
+    for entry in entries:
+        if entry["date"].lower() == date.lower():
+            return {
+                "success": True,
+                "entry": entry
+            }
+    
+    raise HTTPException(status_code=404, detail=f"No entry found for date: {date}")
+
+@app.get("/api/llm/status")
+async def get_llm_status():
+    """Check LLM (Ollama on Veron) availability."""
+    available = await test_connection()
+    
+    return {
+        "success": True,
+        "available": available,
+        "model": "qwen2.5:32b" if available else "mock",
+        "message": "Veron 1 Ollama connected" if available else "Using mock responses (Veron unavailable)"
+    }
 
 # ----- Service Worker & Manifest -----
 
