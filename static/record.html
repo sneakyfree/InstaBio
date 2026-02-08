@@ -296,8 +296,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            padding: var(--spacing);
-            padding-bottom: 180px;
+            padding: 12px var(--spacing) 100px;
             padding-right: 70px; /* room for text slider */
         }
         
@@ -306,7 +305,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             flex-shrink: 0;
         }
         .logo {
@@ -329,10 +328,10 @@
         /* ===== Wi-Fi Indicator ===== */
         .wifi-indicator {
             text-align: center;
-            font-size: 20px;
-            padding: 8px 12px;
+            font-size: 16px;
+            padding: 4px 12px;
             border-radius: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             background: rgba(45, 80, 22, 0.08);
             color: var(--color-text-light);
             flex-shrink: 0;
@@ -341,32 +340,34 @@
         /* ===== Status Bar ===== */
         .status-bar {
             text-align: center;
-            padding: 12px 16px;
+            padding: 8px 16px;
             background: var(--color-white);
             border-radius: var(--radius);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
         }
         .timer {
-            font-size: 48px;
+            font-size: 40px;
             font-weight: 700;
             color: var(--color-primary);
             font-variant-numeric: tabular-nums;
             line-height: 1.1;
         }
         .status-text {
-            font-size: 22px;
+            font-size: 20px;
             color: var(--color-text-light);
-            margin-top: 4px;
         }
         .status-text.recording { color: var(--color-green); font-weight: 600; }
         .status-text.paused { color: var(--color-red); }
         
         .saving-status {
-            font-size: 20px;
+            font-size: 16px;
             color: var(--color-primary);
-            margin-top: 6px;
-            min-height: 24px;
+            min-height: 20px;
         }
         
         /* ===== Transcript Area ===== */
@@ -374,10 +375,10 @@
             flex: 1;
             background: var(--color-white);
             border-radius: var(--radius);
-            padding: var(--spacing);
+            padding: 16px;
             overflow-y: auto;
-            margin-bottom: 8px;
-            min-height: 120px;
+            margin-bottom: 4px;
+            min-height: 200px;
             scroll-behavior: smooth;
             display: flex;
             flex-direction: column;
@@ -421,7 +422,7 @@
         .paused-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255, 248, 240, 0.97);
+            background: #FFF8F0;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -477,31 +478,32 @@
         }
         .resume-btn:hover { transform: scale(1.03); }
         
-        /* ===== Recording Button Area ===== */
+        /* ===== Recording Button Area — Minimal Floating ===== */
         .record-button-area {
             position: fixed;
             bottom: 0; left: 0; right: 0;
-            padding: 16px var(--spacing) 28px;
-            background: linear-gradient(transparent, var(--color-background) 20%);
+            padding: 12px var(--spacing) 20px;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: space-between;
+            align-items: flex-end;
             z-index: 100;
-            gap: 10px;
+            pointer-events: none;
         }
+        .record-button-area > * { pointer-events: auto; }
         
         .record-btn {
-            width: 120px;
-            height: 120px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             border: none;
-            font-size: 48px;
+            font-size: 36px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.25s;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            flex-shrink: 0;
         }
         .record-btn.ready {
             background: var(--color-blue);
@@ -511,28 +513,35 @@
         .record-btn.recording {
             background: var(--color-green);
             color: var(--color-white);
+            animation: btn-strobe 3s ease-in-out infinite;
         }
         .record-btn.recording:hover { transform: scale(1.06); }
         
+        @keyframes btn-strobe {
+            0%, 100% { box-shadow: 0 0 12px 4px rgba(22, 163, 74, 0.3); opacity: 1; }
+            50% { box-shadow: 0 0 30px 12px rgba(22, 163, 74, 0.6); opacity: 0.85; }
+        }
+        
         .break-btn {
-            background: transparent;
+            background: rgba(255, 248, 240, 0.85);
             border: 2px solid var(--color-text-light);
             color: var(--color-text-light);
             border-radius: 30px;
-            padding: 12px 32px;
-            font-size: 22px;
+            padding: 10px 20px;
+            font-size: 18px;
             font-weight: 600;
             cursor: pointer;
             display: none;
-            min-height: var(--touch-min);
+            min-height: 52px;
+            backdrop-filter: blur(4px);
         }
         .break-btn.visible { display: block; }
         
         /* ===== Stats Footer ===== */
         .stats {
             text-align: center;
-            padding: 6px;
-            font-size: 20px;
+            padding: 4px;
+            font-size: 16px;
             color: var(--color-text-light);
             flex-shrink: 0;
         }
@@ -680,9 +689,9 @@
         </div>
     </div>
     
-    <!-- Record Button -->
+    <!-- Record Button — Floating bottom corners -->
     <div class="record-button-area">
-        <button id="break-btn" class="break-btn" onclick="pauseRecording()">☕ Take a Break</button>
+        <button id="break-btn" class="break-btn" onclick="pauseRecording()">☕ Break</button>
         <button id="record-btn" class="record-btn ready" aria-label="Start recording">
             🎙️
         </button>
