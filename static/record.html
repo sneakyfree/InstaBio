@@ -8,7 +8,6 @@
     <link rel="manifest" href="/manifest.json">
     
     <style>
-        /* ===== Variables ===== */
         :root {
             --color-primary: #2D5016;
             --color-primary-light: #3D6B1E;
@@ -16,20 +15,16 @@
             --color-white: #FFFFFF;
             --color-text: #1A1A1A;
             --color-text-light: #4A4A4A;
-            --color-recording: #2D5016;
-            --color-paused: #B91C1C;
-            --border-width: 8px;
+            --color-blue: #2563EB;
+            --color-green: #16A34A;
+            --color-red: #DC2626;
             --font-body: 20px;
             --touch-min: 64px;
             --spacing: 24px;
             --radius: 16px;
         }
         
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -39,50 +34,61 @@
             background: var(--color-background);
             min-height: 100vh;
             overflow: hidden;
+            transition: box-shadow 0.5s ease;
         }
         
-        /* ===== Recording Border Frame ===== */
-        .recording-frame {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: var(--border-width) solid transparent;
-            pointer-events: none;
-            z-index: 1000;
-            transition: border-color 0.3s;
+        body.recording-glow {
+            animation: green-breathe 4.5s ease-in-out infinite;
         }
         
-        /* Green pulse when recording */
-        .recording-frame.recording {
-            border-color: var(--color-recording);
-            animation: pulse-green 2s ease-in-out infinite;
+        @keyframes green-breathe {
+            0%, 100% { box-shadow: inset 0 0 30px 10px rgba(22, 163, 74, 0.15), 0 0 60px 20px rgba(22, 163, 74, 0.1); }
+            50% { box-shadow: inset 0 0 80px 30px rgba(22, 163, 74, 0.35), 0 0 120px 50px rgba(22, 163, 74, 0.25); }
         }
         
-        @keyframes pulse-green {
-            0%, 100% { border-color: var(--color-recording); opacity: 1; }
-            50% { border-color: #4A8F2A; opacity: 0.7; }
+        /* ===== Interview Mode Toggle ===== */
+        .mode-toggle {
+            display: flex;
+            background: var(--color-white);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            overflow: hidden;
+            border: 2px solid var(--color-primary);
         }
-        
-        /* Red flash when paused/interrupted */
-        .recording-frame.paused {
-            border-color: var(--color-paused);
-            animation: flash-red 0.5s ease-in-out;
+        .mode-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--color-primary);
+            transition: all 0.2s;
         }
-        
-        @keyframes flash-red {
-            0%, 100% { border-color: var(--color-paused); opacity: 1; }
-            50% { opacity: 0.5; }
+        .mode-btn.active {
+            background: var(--color-primary);
+            color: var(--color-white);
         }
+        .guided-coming-soon {
+            display: none;
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 16px;
+            border: 2px dashed var(--color-primary);
+        }
+        .guided-coming-soon h3 { color: var(--color-primary); margin-bottom: 8px; }
+        .guided-coming-soon p { color: var(--color-text-light); font-size: 17px; }
         
         /* ===== Main Container ===== */
         .container {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            padding: calc(var(--border-width) + var(--spacing));
-            padding-bottom: calc(var(--border-width) + 100px);
+            padding: var(--spacing);
+            padding-bottom: 180px;
         }
         
         /* ===== Header ===== */
@@ -90,34 +96,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
-        
         .logo {
             font-size: 24px;
             font-weight: 700;
             color: var(--color-primary);
             text-decoration: none;
         }
-        
-        .nav-links {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .nav-link {
-            color: var(--color-primary);
-            text-decoration: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        
-        .nav-link:hover {
-            background: rgba(45, 80, 22, 0.1);
-        }
-        
+        .nav-links { display: flex; gap: 8px; }
         .nav-link {
             font-size: 18px;
             color: var(--color-primary);
@@ -128,34 +115,45 @@
             align-items: center;
         }
         
+        /* ===== Wi-Fi Indicator ===== */
+        .wifi-indicator {
+            text-align: center;
+            font-size: 15px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: rgba(45, 80, 22, 0.08);
+            color: var(--color-text-light);
+        }
+        
         /* ===== Status Bar ===== */
         .status-bar {
             text-align: center;
             padding: 16px;
             background: var(--color-white);
             border-radius: var(--radius);
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
-        
         .timer {
-            font-size: 48px;
+            font-size: 56px;
             font-weight: 700;
             color: var(--color-primary);
             font-variant-numeric: tabular-nums;
+            line-height: 1.1;
         }
-        
         .status-text {
-            font-size: 18px;
+            font-size: 20px;
             color: var(--color-text-light);
-            margin-top: 4px;
+            margin-top: 6px;
         }
+        .status-text.recording { color: var(--color-green); font-weight: 600; }
+        .status-text.paused { color: var(--color-red); }
         
-        .status-text.recording {
-            color: var(--color-recording);
-        }
-        
-        .status-text.paused {
-            color: var(--color-paused);
+        .saving-status {
+            font-size: 18px;
+            color: var(--color-primary);
+            margin-top: 8px;
+            min-height: 24px;
         }
         
         /* ===== Transcript Area ===== */
@@ -165,35 +163,33 @@
             border-radius: var(--radius);
             padding: var(--spacing);
             overflow-y: auto;
-            margin-bottom: 16px;
-            min-height: 200px;
+            margin-bottom: 12px;
+            min-height: 180px;
+            scroll-behavior: smooth;
         }
-        
         .transcript-placeholder {
             text-align: center;
             color: var(--color-text-light);
             padding: 40px 20px;
         }
-        
         .transcript-text {
             font-size: 22px;
             line-height: 1.6;
             color: var(--color-text);
         }
-        
         .transcript-text .current {
-            color: var(--color-primary);
-            font-weight: 500;
+            color: var(--color-green);
+            font-weight: 600;
+            background: rgba(22, 163, 74, 0.08);
+            border-radius: 4px;
+            padding: 0 2px;
         }
         
         /* ===== Paused Overlay ===== */
         .paused-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(185, 28, 28, 0.95);
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 248, 240, 0.97);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -201,142 +197,132 @@
             z-index: 999;
             padding: var(--spacing);
             text-align: center;
-            color: var(--color-white);
+            color: var(--color-text);
         }
+        .paused-overlay.hidden { display: none; }
         
-        .paused-overlay.hidden {
-            display: none;
+        .not-recording-badge {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--color-red);
+            margin-bottom: 12px;
+            letter-spacing: 1px;
         }
-        
-        .paused-icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-        }
-        
         .paused-overlay h2 {
-            font-size: 32px;
-            margin-bottom: 16px;
+            font-size: 28px;
+            color: var(--color-primary);
+            margin-bottom: 12px;
         }
-        
         .paused-overlay p {
-            font-size: 22px;
+            font-size: 20px;
             margin-bottom: 8px;
-            opacity: 0.9;
+            color: var(--color-text-light);
         }
-        
         .paused-overlay .reassurance {
             font-size: 20px;
-            margin: 24px 0;
-            padding: 16px;
-            background: rgba(255,255,255,0.15);
+            margin: 20px 0;
+            padding: 16px 24px;
+            background: rgba(45, 80, 22, 0.08);
             border-radius: var(--radius);
+            color: var(--color-primary);
         }
+        .paused-overlay .saved-time { font-weight: 700; }
         
-        .paused-overlay .saved-time {
+        .resume-btn {
+            width: 100%;
+            max-width: 320px;
+            min-height: 80px;
+            background: var(--color-green);
+            color: var(--color-white);
+            border: none;
+            border-radius: var(--radius);
+            font-size: 26px;
             font-weight: 700;
+            cursor: pointer;
+            margin-top: 24px;
+            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.3);
+            transition: transform 0.2s;
         }
+        .resume-btn:hover { transform: scale(1.03); }
         
-        /* ===== Recording Button ===== */
+        /* ===== Recording Button Area ===== */
         .record-button-area {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: var(--spacing);
+            bottom: 0; left: 0; right: 0;
+            padding: 16px var(--spacing) 28px;
             background: linear-gradient(transparent, var(--color-background) 20%);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             z-index: 100;
+            gap: 10px;
         }
         
         .record-btn {
-            width: 120px;
-            height: 120px;
+            width: 110px;
+            height: 110px;
             border-radius: 50%;
             border: none;
-            font-size: 48px;
+            font-size: 44px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: all 0.25s;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.15);
         }
-        
         .record-btn.ready {
-            background: var(--color-primary);
+            background: var(--color-blue);
             color: var(--color-white);
         }
-        
-        .record-btn.ready:hover {
-            transform: scale(1.05);
-            background: var(--color-primary-light);
-        }
-        
+        .record-btn.ready:hover { transform: scale(1.06); }
         .record-btn.recording {
-            background: var(--color-paused);
+            background: var(--color-green);
             color: var(--color-white);
         }
+        .record-btn.recording:hover { transform: scale(1.06); }
         
-        .record-btn.recording:hover {
-            transform: scale(1.05);
-        }
-        
-        .resume-btn {
-            width: 100%;
-            max-width: 300px;
-            min-height: 80px;
-            background: var(--color-white);
-            color: var(--color-paused);
-            border: none;
-            border-radius: var(--radius);
-            font-size: 28px;
-            font-weight: 700;
+        .break-btn {
+            background: transparent;
+            border: 2px solid var(--color-text-light);
+            color: var(--color-text-light);
+            border-radius: 30px;
+            padding: 10px 28px;
+            font-size: 18px;
+            font-weight: 600;
             cursor: pointer;
-            margin-top: 32px;
+            display: none;
         }
-        
-        .resume-btn:hover {
-            transform: scale(1.02);
-        }
+        .break-btn.visible { display: block; }
         
         /* ===== Stats Footer ===== */
         .stats {
             text-align: center;
             padding: 8px;
-            font-size: 16px;
+            font-size: 15px;
             color: var(--color-text-light);
         }
         
-        /* ===== Accessibility ===== */
-        :focus {
-            outline: 3px solid var(--color-primary);
-            outline-offset: 2px;
-        }
+        :focus { outline: 3px solid var(--color-primary); outline-offset: 2px; }
         
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation: none !important;
-                transition: none !important;
-            }
+            *, *::before, *::after { animation: none !important; transition: none !important; }
         }
     </style>
 </head>
 <body>
-    <!-- Recording Border Frame -->
-    <div id="recording-frame" class="recording-frame"></div>
     
     <!-- Paused Overlay -->
     <div id="paused-overlay" class="paused-overlay hidden">
-        <div class="paused-icon">⚠️</div>
-        <h2>Recording Paused</h2>
-        <p>Don't worry — everything before this is saved.</p>
+        <div class="not-recording-badge">⏸ NOT RECORDING</div>
+        <h2>Taking a Break — Your story is safe, don't worry!</h2>
         <div class="reassurance">
-            ✅ Saved up to: <span id="saved-time" class="saved-time">0:00</span>
+            <div id="saving-overlay-status">✅ Saving your words...</div>
+            <div style="margin-top:8px;">Saved up to: <span id="saved-time" class="saved-time">0:00</span></div>
         </div>
-        <p>Take your time. Continue when you're ready.</p>
+        <p>Take your time. There's no rush at all. 💛</p>
         <button id="resume-btn" class="resume-btn">
-            ▶️ Resume Recording
+            ▶️ Resume When Ready
         </button>
     </div>
     
@@ -348,20 +334,33 @@
             <div class="nav-links">
                 <a href="/vault" class="nav-link">Vault</a>
                 <a href="/biography" class="nav-link">Bio</a>
-                <a href="/progress" class="nav-link">Progress</a>
             </div>
         </div>
+        
+        <!-- Interview Mode Toggle -->
+        <div class="mode-toggle">
+            <button id="mode-free" class="mode-btn active" onclick="setMode('free')">🎙️ Free Talk</button>
+            <button id="mode-guided" class="mode-btn" onclick="setMode('guided')">🤖 Guided Interview</button>
+        </div>
+        <div id="guided-coming-soon" class="guided-coming-soon">
+            <h3>🤖 Coming Soon!</h3>
+            <p>An AI interviewer will ask you questions about your life to help tell your story. Stay tuned!</p>
+        </div>
+        
+        <!-- Wi-Fi Indicator -->
+        <div id="wifi-indicator" class="wifi-indicator">📶 Checking connection...</div>
         
         <!-- Status Bar -->
         <div class="status-bar">
             <div id="timer" class="timer">0:00</div>
-            <div id="status-text" class="status-text">Tap the button to start recording</div>
+            <div id="status-text" class="status-text">Tap the big blue button whenever you're ready, dear</div>
+            <div id="saving-status" class="saving-status"></div>
         </div>
         
         <!-- Transcript Area -->
         <div id="transcript-area" class="transcript-area">
             <div id="transcript-placeholder" class="transcript-placeholder">
-                <p>🎙️</p>
+                <p style="font-size:40px;">🎙️</p>
                 <p>Your words will appear here as you speak.</p>
                 <p style="font-size: 16px; margin-top: 16px;">Just talk about your life — any memory, any story.</p>
             </div>
@@ -377,6 +376,7 @@
     
     <!-- Record Button -->
     <div class="record-button-area">
+        <button id="break-btn" class="break-btn" onclick="pauseRecording()">☕ Take a Break</button>
         <button id="record-btn" class="record-btn ready" aria-label="Start recording">
             🎙️
         </button>
@@ -384,10 +384,9 @@
     
     <script>
         // ===== InstaBio Recording Engine =====
-        // Zero data loss architecture: chunks saved locally, uploaded in background
-        
         const API_URL = '/api';
-        const CHUNK_DURATION_MS = 30000; // 30 seconds per chunk
+        const CHUNK_DURATION_MS = 30000;
+        const MAX_TRANSCRIPT_LINES = 500;
         
         // State
         let isRecording = false;
@@ -404,42 +403,65 @@
         let recognition = null;
         let uploadQueue = [];
         let currentChunks = [];
+        let transcriptLines = [];
         
         // DOM Elements
-        const recordingFrame = document.getElementById('recording-frame');
         const pausedOverlay = document.getElementById('paused-overlay');
         const recordBtn = document.getElementById('record-btn');
+        const breakBtn = document.getElementById('break-btn');
         const resumeBtn = document.getElementById('resume-btn');
         const timerDisplay = document.getElementById('timer');
         const statusText = document.getElementById('status-text');
+        const savingStatus = document.getElementById('saving-status');
+        const savingOverlayStatus = document.getElementById('saving-overlay-status');
         const transcriptArea = document.getElementById('transcript-area');
         const transcriptPlaceholder = document.getElementById('transcript-placeholder');
         const transcriptText = document.getElementById('transcript-text');
         const savedTimeSpan = document.getElementById('saved-time');
         const totalTimeSpan = document.getElementById('total-time');
         const chunkCountSpan = document.getElementById('chunk-count');
+        const wifiIndicator = document.getElementById('wifi-indicator');
         
         // Auth
         const token = localStorage.getItem('instabio_token');
-        const userName = localStorage.getItem('instabio_name');
+        if (!token) { window.location.href = '/onboard'; }
         
-        if (!token) {
-            window.location.href = '/onboard';
+        // ===== Interview Mode =====
+        function setMode(mode) {
+            document.getElementById('mode-free').classList.toggle('active', mode === 'free');
+            document.getElementById('mode-guided').classList.toggle('active', mode === 'guided');
+            document.getElementById('guided-coming-soon').style.display = mode === 'guided' ? 'block' : 'none';
         }
         
-        // ===== IndexedDB for Local Storage =====
+        // ===== Wi-Fi Indicator =====
+        function updateWifiIndicator() {
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (conn) {
+                const dominated = conn.downlink < 1 || conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g';
+                if (dominated) {
+                    wifiIndicator.textContent = "📱 Saving to your phone — we'll upload when you have better Wi-Fi";
+                } else {
+                    wifiIndicator.textContent = "📶 Strong connection — saving as you speak";
+                }
+            } else {
+                wifiIndicator.textContent = navigator.onLine
+                    ? "📶 Strong connection — saving as you speak"
+                    : "📱 Saving to your phone — we'll upload when you have better Wi-Fi";
+            }
+        }
+        updateWifiIndicator();
+        if (navigator.connection) navigator.connection.addEventListener('change', updateWifiIndicator);
+        window.addEventListener('online', updateWifiIndicator);
+        window.addEventListener('offline', updateWifiIndicator);
+        
+        // ===== IndexedDB =====
         let db = null;
         
         async function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open('InstaBioDB', 1);
-                
                 request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    db = request.result;
-                    resolve(db);
-                };
-                
+                request.onsuccess = () => { db = request.result; resolve(db); };
                 request.onupgradeneeded = (e) => {
                     const database = e.target.result;
                     if (!database.objectStoreNames.contains('chunks')) {
@@ -456,16 +478,7 @@
             return new Promise((resolve, reject) => {
                 const tx = db.transaction('chunks', 'readwrite');
                 const store = tx.objectStore('chunks');
-                
-                const chunk = {
-                    sessionUUID,
-                    chunkIndex,
-                    duration,
-                    blob,
-                    timestamp: Date.now(),
-                    uploaded: false
-                };
-                
+                const chunk = { sessionUUID, chunkIndex, duration, blob, timestamp: Date.now(), uploaded: false };
                 const request = store.add(chunk);
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
@@ -476,7 +489,6 @@
             return new Promise((resolve, reject) => {
                 const tx = db.transaction('queue', 'readwrite');
                 const store = tx.objectStore('queue');
-                
                 const request = store.add({ chunkId, timestamp: Date.now() });
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
@@ -485,68 +497,49 @@
         
         // ===== Recording Functions =====
         
+        function createRecorder() {
+            const rec = new MediaRecorder(audioStream, { mimeType: 'audio/webm;codecs=opus' });
+            rec.ondataavailable = (e) => {
+                if (e.data.size > 0) currentChunks.push(e.data);
+            };
+            rec.onstop = async () => {
+                if (currentChunks.length > 0) await saveCurrentChunk();
+                if (isRecording && !isPaused) {
+                    currentChunks = [];
+                    mediaRecorder = createRecorder();
+                    mediaRecorder.start();
+                }
+            };
+            return rec;
+        }
+        
         async function startRecording() {
             try {
-                // Request microphone access
-                audioStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
                 });
                 
-                // Start new session on server
                 const response = await fetch(`${API_URL}/session/start`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.detail || 'Failed to start session');
                 
                 sessionUUID = data.session_uuid;
                 sessionId = data.session_id;
                 chunkIndex = 0;
-                
-                // Setup MediaRecorder — stop/restart approach so each chunk
-                // is a self-contained WebM file with proper headers
                 currentChunks = [];
-                
-                function createRecorder() {
-                    const rec = new MediaRecorder(audioStream, {
-                        mimeType: 'audio/webm;codecs=opus'
-                    });
-                    rec.ondataavailable = (e) => {
-                        if (e.data.size > 0) {
-                            currentChunks.push(e.data);
-                        }
-                    };
-                    rec.onstop = async () => {
-                        if (currentChunks.length > 0) {
-                            await saveCurrentChunk();
-                        }
-                        // Restart if still recording (chunk boundary)
-                        if (isRecording && !isPaused) {
-                            currentChunks = [];
-                            mediaRecorder = createRecorder();
-                            mediaRecorder.start();
-                        }
-                    };
-                    return rec;
-                }
                 
                 mediaRecorder = createRecorder();
                 mediaRecorder.start();
                 
-                // Stop and restart recorder every 30s to create valid chunks
                 chunkInterval = setInterval(() => {
                     if (isRecording && !isPaused && mediaRecorder.state === 'recording') {
-                        mediaRecorder.stop(); // triggers onstop → save → restart
+                        mediaRecorder.stop();
                     }
                 }, CHUNK_DURATION_MS);
                 
-                // Update UI
                 isRecording = true;
                 isPaused = false;
                 recordingStartTime = Date.now();
@@ -564,24 +557,16 @@
         
         async function saveCurrentChunk() {
             if (currentChunks.length === 0) return;
-            
             const blob = new Blob(currentChunks, { type: 'audio/webm' });
             currentChunks = [];
-            
             const duration = CHUNK_DURATION_MS / 1000;
             
-            // Save to IndexedDB first (zero data loss)
             try {
                 const chunkId = await saveChunkLocally(blob, sessionUUID, chunkIndex, duration);
                 await queueForUpload(chunkId);
                 chunkIndex++;
-                
-                // Update chunk count
                 chunkCountSpan.textContent = chunkIndex;
-                
-                // Upload in background
                 uploadChunk(blob, chunkIndex - 1, duration);
-                
             } catch (err) {
                 console.error('Failed to save chunk locally:', err);
             }
@@ -600,44 +585,38 @@
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
                 });
-                
                 if (!response.ok) {
-                    console.error('Upload failed, will retry');
                     uploadQueue.push({ blob, index, duration });
                 }
             } catch (err) {
-                console.error('Upload error:', err);
                 uploadQueue.push({ blob, index, duration });
             }
         }
         
         function pauseRecording() {
             if (!isRecording || isPaused) return;
-            
             isPaused = true;
             pausedTime += Date.now() - recordingStartTime;
             
-            // Stop recorder to save current chunk as valid WebM
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop(); // onstop won't restart because isPaused=true
-            }
-            
-            if (chunkInterval) {
-                clearInterval(chunkInterval);
-                chunkInterval = null;
-            }
+            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+            if (chunkInterval) { clearInterval(chunkInterval); chunkInterval = null; }
             
             stopSpeechRecognition();
             updateUI('paused');
+            
+            // Show saving status
+            savingOverlayStatus.textContent = '✅ Saving your words...';
+            setTimeout(() => {
+                const mins = Math.floor(pausedTime / 60000);
+                savingOverlayStatus.textContent = `✅ All saved! ${mins} minute${mins !== 1 ? 's' : ''} of your story recorded so far`;
+            }, 2000);
         }
         
         function resumeRecording() {
             if (!isRecording || !isPaused) return;
-            
             isPaused = false;
             recordingStartTime = Date.now();
             
-            // Start fresh recorder for new valid chunk
             currentChunks = [];
             mediaRecorder = createRecorder();
             mediaRecorder.start();
@@ -654,22 +633,12 @@
         
         async function stopRecording() {
             if (!isRecording) return;
-            
             isRecording = false;
             isPaused = false;
             
-            if (chunkInterval) {
-                clearInterval(chunkInterval);
-                chunkInterval = null;
-            }
-            
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop(); // will trigger onstop → save final chunk
-            }
-            
-            if (audioStream) {
-                audioStream.getTracks().forEach(track => track.stop());
-            }
+            if (chunkInterval) { clearInterval(chunkInterval); chunkInterval = null; }
+            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+            if (audioStream) audioStream.getTracks().forEach(track => track.stop());
             
             stopTimer();
             stopSpeechRecognition();
@@ -677,21 +646,11 @@
         }
         
         // ===== Timer =====
-        
-        function startTimer() {
-            timerInterval = setInterval(updateTimer, 100);
-        }
-        
-        function stopTimer() {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
-        }
+        function startTimer() { timerInterval = setInterval(updateTimer, 100); }
+        function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
         
         function updateTimer() {
             if (isPaused) return;
-            
             const elapsed = pausedTime + (Date.now() - recordingStartTime);
             timerDisplay.textContent = formatTime(elapsed);
             savedTimeSpan.textContent = formatTime(elapsed);
@@ -702,24 +661,16 @@
             const hours = Math.floor(totalSeconds / 3600);
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
-            
-            if (hours > 0) {
-                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
+            if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
         
-        // ===== Speech Recognition (for live transcription) =====
-        
+        // ===== Speech Recognition =====
         function startSpeechRecognition() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                console.log('Speech recognition not supported');
-                return;
-            }
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
             
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = navigator.language || 'en-US';
@@ -737,141 +688,112 @@
                     }
                 }
                 
-                // Update display
                 transcriptPlaceholder.style.display = 'none';
                 
                 if (finalTranscript) {
-                    transcriptText.innerHTML += finalTranscript;
+                    transcriptLines.push(finalTranscript);
+                    // Buffer management: keep last ~500 lines
+                    if (transcriptLines.length > MAX_TRANSCRIPT_LINES) {
+                        transcriptLines = transcriptLines.slice(-Math.floor(MAX_TRANSCRIPT_LINES * 0.8));
+                    }
                 }
                 
+                // Rebuild display
+                let html = transcriptLines.join('');
                 if (interimTranscript) {
-                    // Show current words being spoken
-                    const existingText = transcriptText.innerHTML.replace(/<span class="current">.*<\/span>/, '');
-                    transcriptText.innerHTML = existingText + `<span class="current">${interimTranscript}</span>`;
+                    html += `<span class="current">${interimTranscript}</span>`;
                 }
+                transcriptText.innerHTML = html;
                 
-                // Auto-scroll
+                // Auto-scroll to bottom
                 transcriptArea.scrollTop = transcriptArea.scrollHeight;
             };
             
             recognition.onerror = (event) => {
-                console.log('Speech recognition error:', event.error);
                 if (event.error === 'no-speech' && isRecording && !isPaused) {
-                    // Restart recognition
-                    setTimeout(() => {
-                        if (isRecording && !isPaused) {
-                            recognition.start();
-                        }
-                    }, 100);
+                    setTimeout(() => { if (isRecording && !isPaused) recognition.start(); }, 100);
                 }
             };
             
             recognition.onend = () => {
                 if (isRecording && !isPaused) {
-                    // Restart recognition
                     setTimeout(() => {
                         if (isRecording && !isPaused && recognition) {
-                            try {
-                                recognition.start();
-                            } catch (e) {
-                                console.log('Recognition restart failed:', e);
-                            }
+                            try { recognition.start(); } catch (e) {}
                         }
                     }, 100);
                 }
             };
             
-            try {
-                recognition.start();
-            } catch (e) {
-                console.log('Failed to start recognition:', e);
-            }
+            try { recognition.start(); } catch (e) {}
         }
         
         function stopSpeechRecognition() {
-            if (recognition) {
-                try {
-                    recognition.stop();
-                } catch (e) {
-                    console.log('Failed to stop recognition:', e);
-                }
-            }
+            if (recognition) { try { recognition.stop(); } catch (e) {} }
         }
         
         // ===== UI Updates =====
-        
         function updateUI(state) {
             switch (state) {
                 case 'ready':
-                    recordingFrame.className = 'recording-frame';
+                    document.body.classList.remove('recording-glow');
                     pausedOverlay.classList.add('hidden');
                     recordBtn.className = 'record-btn ready';
                     recordBtn.innerHTML = '🎙️';
                     recordBtn.setAttribute('aria-label', 'Start recording');
+                    breakBtn.classList.remove('visible');
                     statusText.className = 'status-text';
-                    statusText.textContent = 'Tap the button to start recording';
+                    statusText.textContent = 'Tap the big blue button whenever you\'re ready, dear';
+                    savingStatus.textContent = '';
                     break;
                     
                 case 'recording':
-                    recordingFrame.className = 'recording-frame recording';
+                    document.body.classList.add('recording-glow');
                     pausedOverlay.classList.add('hidden');
                     recordBtn.className = 'record-btn recording';
-                    recordBtn.innerHTML = '⏸️';
-                    recordBtn.setAttribute('aria-label', 'Pause recording');
+                    recordBtn.innerHTML = '🎙️';
+                    recordBtn.setAttribute('aria-label', 'Recording in progress');
+                    breakBtn.classList.add('visible');
                     statusText.className = 'status-text recording';
-                    statusText.textContent = '● Recording — speak freely';
+                    statusText.textContent = "I'm listening... keep talking, you're doing great! ✨";
+                    savingStatus.textContent = '';
                     break;
                     
                 case 'paused':
-                    recordingFrame.className = 'recording-frame paused';
+                    document.body.classList.remove('recording-glow');
                     pausedOverlay.classList.remove('hidden');
+                    breakBtn.classList.remove('visible');
                     statusText.className = 'status-text paused';
-                    statusText.textContent = '⏸ Paused';
+                    statusText.textContent = '⏸ Taking a Break';
                     break;
             }
         }
         
         // ===== Event Listeners =====
-        
         recordBtn.addEventListener('click', () => {
             if (!isRecording) {
                 startRecording();
             } else if (isPaused) {
                 resumeRecording();
-            } else {
-                pauseRecording();
             }
+            // While recording, the main button stays as a mic icon; pause is via break button
         });
         
-        resumeBtn.addEventListener('click', () => {
-            resumeRecording();
-        });
+        resumeBtn.addEventListener('click', () => { resumeRecording(); });
         
-        // Handle visibility changes (app backgrounded)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && isRecording && !isPaused) {
-                // Continue recording in background if possible
-                // Show notification on return
                 console.log('App backgrounded - recording continues');
-            } else if (!document.hidden && isRecording) {
-                console.log('App foregrounded');
             }
         });
         
-        // Handle page unload
         window.addEventListener('beforeunload', (e) => {
-            if (isRecording) {
-                e.preventDefault();
-                e.returnValue = 'You have an active recording. Are you sure you want to leave?';
-            }
+            if (isRecording) { e.preventDefault(); e.returnValue = 'You have an active recording. Are you sure you want to leave?'; }
         });
         
         // ===== Initialize =====
-        
         async function init() {
             await initDB();
-            
-            // Load user stats
             try {
                 const response = await fetch(`${API_URL}/user/stats`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -881,22 +803,15 @@
                     totalTimeSpan.textContent = data.total_duration_formatted || '0:00';
                     chunkCountSpan.textContent = data.total_chunks || 0;
                 }
-            } catch (err) {
-                console.log('Failed to load stats:', err);
-            }
-            
-            // Process any queued uploads
+            } catch (err) {}
             processUploadQueue();
         }
         
         async function processUploadQueue() {
-            // Retry any failed uploads
             while (uploadQueue.length > 0) {
                 const item = uploadQueue.shift();
                 await uploadChunk(item.blob, item.index, item.duration);
             }
-            
-            // Check again in 30 seconds
             setTimeout(processUploadQueue, 30000);
         }
         
