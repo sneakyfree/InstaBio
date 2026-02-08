@@ -32,6 +32,8 @@ from .journal import get_journal_generator
 from .llm_client import get_llm_client, test_connection
 from .voice_clone import get_voice_clone_status_dict
 from .avatar import get_avatar_status_dict, count_user_photos, list_user_photos, save_user_photo, PHOTOS_DIR
+from .avatar_video import generate_avatar_video, list_portraits as list_avatar_portraits, get_portrait as get_avatar_portrait, check_veron_available
+from .interview import start_session as start_interview_session, next_question as interview_next_question, get_session_status as get_interview_status
 from .soul import get_soul_status_dict
 
 # ----- Logging Configuration -----
@@ -999,6 +1001,75 @@ async def manifest():
 async def service_worker():
     """Serve service worker."""
     return FileResponse(STATIC_DIR / "sw.js", media_type="application/javascript")
+
+# ----- Interview Mode Endpoints -----
+
+class InterviewStartRequest(BaseModel):
+    portrait_id: str = "default"
+
+class InterviewNextRequest(BaseModel):
+    session_id: str
+    transcript: str
+    portrait_id: str = "default"
+
+@app.post("/api/interview/start")
+async def api_interview_start(
+    data: InterviewStartRequest,
+    authorization: str = Header(None)
+):
+    """Start an interview session — returns opening question + avatar video URL."""
+    user = await get_current_user(authorization)
+    
+    session = start_interview_session(user['id'], user['first_name'])
+    opening_question = session.questions_asked[0]['question']
+    
+    # Try to generate avatar video; None means use fallback
+    video_url = await generate_avatar_video(opening_question, data.portrait_id)
+    portrait = await get_avatar_portrait(data.portrait_id)
+    
+    return {
+        "success": True,
+        "session_id": session.session_id,
+        "question": opening_question,
+        "video_url": video_url,
+        "portrait": portrait,
+        "fallback": video_url is None,
+    }
+
+@app.post("/api/interview/next")
+async def api_interview_next(
+    data: InterviewNextRequest,
+    authorization: str = Header(None)
+):
+    """Get next question based on transcript so far."""
+    await get_current_user(authorization)
+    
+    question = await interview_next_question(data.session_id, data.transcript)
+    video_url = await generate_avatar_video(question, data.portrait_id)
+    
+    return {
+        "success": True,
+        "question": question,
+        "video_url": video_url,
+        "fallback": video_url is None,
+    }
+
+@app.get("/api/interview/portraits")
+async def api_interview_portraits(authorization: str = Header(None)):
+    """List available interviewer portraits."""
+    await get_current_user(authorization)
+    portraits = await list_avatar_portraits()
+    return {"success": True, "portraits": portraits}
+
+@app.get("/api/interview/status/{session_id}")
+async def api_interview_status(session_id: str, authorization: str = Header(None)):
+    """Get interview session status."""
+    await get_current_user(authorization)
+    status = get_interview_status(session_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Interview session not found")
+    return {"success": True, **status}
+
 
 # ----- Error Handlers -----
 

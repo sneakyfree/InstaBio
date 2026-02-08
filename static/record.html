@@ -82,6 +82,74 @@
         .guided-coming-soon h3 { color: var(--color-primary); margin-bottom: 8px; }
         .guided-coming-soon p { color: var(--color-text-light); font-size: 17px; }
         
+        /* ===== Interview Mode UI ===== */
+        .interview-panel {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+        .interview-panel.visible { display: flex; }
+        
+        .avatar-area {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid var(--color-primary);
+            background: #e8e0d4;
+        }
+        .avatar-area img, .avatar-area video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-area.speaking {
+            animation: avatar-pulse 2s ease-in-out infinite;
+        }
+        @keyframes avatar-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(45, 80, 22, 0.4); }
+            50% { box-shadow: 0 0 0 16px rgba(45, 80, 22, 0); }
+        }
+        
+        .speech-bubble {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            font-size: 19px;
+            line-height: 1.5;
+            color: var(--color-text);
+            border: 2px solid var(--color-primary);
+            position: relative;
+            max-width: 100%;
+            text-align: center;
+        }
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-bottom-color: var(--color-primary);
+        }
+        
+        .interview-thinking {
+            display: none;
+            color: var(--color-primary);
+            font-size: 17px;
+            font-weight: 600;
+            animation: thinking-dots 1.5s infinite;
+        }
+        .interview-thinking.visible { display: block; }
+        @keyframes thinking-dots {
+            0%, 20% { opacity: 1; }
+            50% { opacity: 0.4; }
+            80%, 100% { opacity: 1; }
+        }
+        
         /* ===== Main Container ===== */
         .container {
             display: flex;
@@ -347,6 +415,17 @@
             <p>An AI interviewer will ask you questions about your life to help tell your story. Stay tuned!</p>
         </div>
         
+        <!-- Interview Mode Panel -->
+        <div id="interview-panel" class="interview-panel">
+            <div id="avatar-area" class="avatar-area">
+                <video id="avatar-video" style="display:none;" playsinline></video>
+                <img id="avatar-portrait" src="/static/portraits/default.jpg" alt="Interviewer"
+                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2235%22 r=%2220%22 fill=%22%232D5016%22/><ellipse cx=%2250%22 cy=%2280%22 rx=%2230%22 ry=%2220%22 fill=%22%232D5016%22/></svg>'">
+            </div>
+            <div id="speech-bubble" class="speech-bubble" style="display:none;"></div>
+            <div id="interview-thinking" class="interview-thinking">💭 Thinking of next question...</div>
+        </div>
+        
         <!-- Wi-Fi Indicator -->
         <div id="wifi-indicator" class="wifi-indicator">📶 Checking connection...</div>
         
@@ -427,10 +506,121 @@
         if (!token) { window.location.href = '/onboard'; }
         
         // ===== Interview Mode =====
+        let interviewMode = false;
+        let interviewSessionId = null;
+        let interviewSilenceTimer = null;
+        let lastSpeechTime = Date.now();
+        let currentInterviewTranscript = '';
+        
         function setMode(mode) {
             document.getElementById('mode-free').classList.toggle('active', mode === 'free');
             document.getElementById('mode-guided').classList.toggle('active', mode === 'guided');
-            document.getElementById('guided-coming-soon').style.display = mode === 'guided' ? 'block' : 'none';
+            document.getElementById('guided-coming-soon').style.display = 'none';
+            document.getElementById('interview-panel').classList.toggle('visible', mode === 'guided');
+            interviewMode = mode === 'guided';
+            
+            if (interviewMode && !interviewSessionId) {
+                // Will start interview when recording starts
+            }
+        }
+        
+        async function startInterview() {
+            try {
+                const resp = await fetch(`${API_URL}/interview/start`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ portrait_id: 'default' })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    interviewSessionId = data.session_id;
+                    showInterviewQuestion(data.question, data.video_url, data.portrait);
+                }
+            } catch (e) {
+                console.error('Failed to start interview:', e);
+                showInterviewQuestion("Hello! Let's start at the very beginning — where and when were you born?", null, null);
+                interviewSessionId = 'fallback-' + Date.now();
+            }
+        }
+        
+        function showInterviewQuestion(question, videoUrl, portrait) {
+            const bubble = document.getElementById('speech-bubble');
+            const avatarArea = document.getElementById('avatar-area');
+            const avatarVideo = document.getElementById('avatar-video');
+            const avatarImg = document.getElementById('avatar-portrait');
+            const thinking = document.getElementById('interview-thinking');
+            
+            thinking.classList.remove('visible');
+            bubble.textContent = question;
+            bubble.style.display = 'block';
+            
+            if (videoUrl) {
+                avatarVideo.src = videoUrl;
+                avatarVideo.style.display = 'block';
+                avatarImg.style.display = 'none';
+                avatarVideo.play().catch(() => {});
+                avatarArea.classList.add('speaking');
+                avatarVideo.onended = () => avatarArea.classList.remove('speaking');
+            } else {
+                // Fallback: pulse portrait + browser TTS
+                avatarVideo.style.display = 'none';
+                avatarImg.style.display = 'block';
+                if (portrait && portrait.image_url) avatarImg.src = portrait.image_url;
+                avatarArea.classList.add('speaking');
+                
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(question);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1.1;
+                    utterance.onend = () => avatarArea.classList.remove('speaking');
+                    speechSynthesis.speak(utterance);
+                } else {
+                    setTimeout(() => avatarArea.classList.remove('speaking'), 3000);
+                }
+            }
+            
+            // Reset transcript tracking for next answer
+            currentInterviewTranscript = '';
+            lastSpeechTime = Date.now();
+            startSilenceDetection();
+        }
+        
+        function startSilenceDetection() {
+            if (interviewSilenceTimer) clearInterval(interviewSilenceTimer);
+            interviewSilenceTimer = setInterval(() => {
+                if (!interviewMode || !isRecording || isPaused) return;
+                const silenceSec = (Date.now() - lastSpeechTime) / 1000;
+                if (currentInterviewTranscript.trim() && silenceSec >= 10) {
+                    requestNextQuestion();
+                }
+            }, 1000);
+        }
+        
+        async function requestNextQuestion() {
+            if (interviewSilenceTimer) clearInterval(interviewSilenceTimer);
+            
+            const thinking = document.getElementById('interview-thinking');
+            thinking.classList.add('visible');
+            
+            try {
+                const resp = await fetch(`${API_URL}/interview/next`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: interviewSessionId,
+                        transcript: currentInterviewTranscript,
+                        portrait_id: 'default'
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showInterviewQuestion(data.question, data.video_url, null);
+                }
+            } catch (e) {
+                console.error('Failed to get next question:', e);
+                thinking.classList.remove('visible');
+                showInterviewQuestion("That's wonderful. Can you tell me more about that?", null, null);
+            }
         }
         
         // ===== Wi-Fi Indicator =====
@@ -549,6 +739,11 @@
                 startTimer();
                 startSpeechRecognition();
                 
+                // Start interview if in guided mode
+                if (interviewMode && !interviewSessionId) {
+                    startInterview();
+                }
+                
             } catch (err) {
                 console.error('Failed to start recording:', err);
                 alert('Could not access microphone. Please allow microphone access and try again.');
@@ -643,6 +838,10 @@
             stopTimer();
             stopSpeechRecognition();
             updateUI('ready');
+            
+            // Clean up interview
+            if (interviewSilenceTimer) { clearInterval(interviewSilenceTimer); interviewSilenceTimer = null; }
+            interviewSessionId = null;
         }
         
         // ===== Timer =====
@@ -685,6 +884,7 @@
                         finalTranscript += transcript + ' ';
                     } else {
                         interimTranscript += transcript;
+                        if (interviewMode) lastSpeechTime = Date.now();
                     }
                 }
                 
@@ -692,6 +892,10 @@
                 
                 if (finalTranscript) {
                     transcriptLines.push(finalTranscript);
+                    if (interviewMode) {
+                        currentInterviewTranscript += finalTranscript;
+                        lastSpeechTime = Date.now();
+                    }
                     // Buffer management: keep last ~500 lines
                     if (transcriptLines.length > MAX_TRANSCRIPT_LINES) {
                         transcriptLines = transcriptLines.slice(-Math.floor(MAX_TRANSCRIPT_LINES * 0.8));
