@@ -303,6 +303,14 @@ async def upload_chunk(
     
     # Write file
     content = await audio.read()
+    
+    # Basic validation: must be at least 1KB and start with WebM/Matroska magic bytes
+    if len(content) < 1024:
+        raise HTTPException(status_code=400, detail="Audio file too small — may be corrupt")
+    # WebM files start with 0x1A45DFA3 (EBML header)
+    if content[:4] != b'\x1a\x45\xdf\xa3':
+        raise HTTPException(status_code=400, detail="Invalid audio format — expected WebM")
+    
     with open(file_path, "wb") as f:
         f.write(content)
     

@@ -203,6 +203,7 @@ async def transcribe_pending_chunks():
             logger.info(f"✅ Transcribed chunk {chunk_id}: {result['text'][:80]}...")
         else:
             logger.warning(f"Chunk {chunk_id} transcribed but returned empty text")
+            await db.mark_chunk_failed(chunk_id, "Empty transcription (no speech detected)")
 
 def is_whisper_available() -> bool:
     """Check if Whisper transcription is available on this system."""
