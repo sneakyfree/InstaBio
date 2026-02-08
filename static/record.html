@@ -18,7 +18,9 @@
             --color-blue: #2563EB;
             --color-green: #16A34A;
             --color-red: #DC2626;
+            --color-warm-bg: #FFFDF5;
             --font-body: 20px;
+            --transcript-size: 28px;
             --touch-min: 64px;
             --spacing: 24px;
             --radius: 16px;
@@ -46,60 +48,184 @@
             50% { box-shadow: inset 0 0 80px 30px rgba(22, 163, 74, 0.35), 0 0 120px 50px rgba(22, 163, 74, 0.25); }
         }
         
-        /* ===== Interview Mode Toggle ===== */
-        .mode-toggle {
+        /* ===== Mode Selection Screen ===== */
+        .mode-selection-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--color-background);
+            z-index: 1100;
             display: flex;
-            background: var(--color-white);
-            border-radius: var(--radius);
-            margin-bottom: 12px;
-            overflow: hidden;
-            border: 2px solid var(--color-primary);
+            flex-direction: column;
+            padding: var(--spacing);
+            overflow-y: auto;
         }
-        .mode-btn {
-            flex: 1;
-            padding: 12px 8px;
-            border: none;
-            background: transparent;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            color: var(--color-primary);
-            transition: all 0.2s;
-        }
-        .mode-btn.active {
-            background: var(--color-primary);
-            color: var(--color-white);
-        }
-        .guided-coming-soon {
-            display: none;
-            background: var(--color-white);
-            border-radius: var(--radius);
-            padding: 24px;
-            text-align: center;
-            margin-bottom: 16px;
-            border: 2px dashed var(--color-primary);
-        }
-        .guided-coming-soon h3 { color: var(--color-primary); margin-bottom: 8px; }
-        .guided-coming-soon p { color: var(--color-text-light); font-size: 17px; }
+        .mode-selection-screen.hidden { display: none; }
         
-        /* ===== Interview Mode UI ===== */
+        .mode-selection-screen h2 {
+            font-size: 28px;
+            color: var(--color-primary);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .mode-selection-screen .subtitle {
+            font-size: 22px;
+            color: var(--color-text-light);
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .free-talk-option {
+            background: var(--color-white);
+            border: 3px solid var(--color-primary);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+        .free-talk-option:hover, .free-talk-option.selected {
+            border-color: var(--color-green);
+            background: #F0FFF0;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+        }
+        .free-talk-option .icon { font-size: 36px; }
+        .free-talk-option .label { font-size: 24px; font-weight: 700; color: var(--color-text); }
+        .free-talk-option .desc { font-size: 20px; color: var(--color-text-light); }
+        
+        .guided-label {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-primary);
+            text-align: center;
+            margin: 16px 0 12px;
+        }
+        
+        .mode-card {
+            background: var(--color-white);
+            border: 3px solid #E0D8CC;
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 14px;
+            cursor: pointer;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+        }
+        .mode-card:hover { border-color: var(--color-primary); }
+        .mode-card.selected {
+            border-color: var(--color-green);
+            background: #F0FFF0;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+        }
+        .mode-card .icon { font-size: 48px; flex-shrink: 0; }
+        .mode-card .card-text { flex: 1; }
+        .mode-card .card-title { font-size: 26px; font-weight: 700; color: var(--color-text); }
+        .mode-card .card-desc { font-size: 20px; color: var(--color-text-light); margin-top: 4px; }
+        
+        .begin-btn {
+            width: 100%;
+            min-height: 80px;
+            background: var(--color-green);
+            color: var(--color-white);
+            border: none;
+            border-radius: var(--radius);
+            font-size: 28px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.3);
+            transition: transform 0.2s;
+        }
+        .begin-btn:hover { transform: scale(1.03); }
+        .begin-btn:disabled { background: #ccc; box-shadow: none; transform: none; cursor: default; }
+        
+        /* ===== Text Size Slider ===== */
+        .text-size-slider {
+            position: fixed;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 248, 240, 0.85);
+            border-radius: 24px;
+            padding: 12px 6px;
+            backdrop-filter: blur(4px);
+        }
+        .text-size-slider.visible { display: flex; }
+        .text-size-slider .big-a { font-size: 36px; font-weight: 800; color: var(--color-primary); }
+        .text-size-slider .small-a { font-size: 18px; font-weight: 600; color: var(--color-text-light); }
+        
+        .text-size-slider input[type="range"] {
+            writing-mode: vertical-lr;
+            direction: rtl;
+            width: 44px;
+            height: 180px;
+            appearance: none;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        .text-size-slider input[type="range"]::-webkit-slider-runnable-track {
+            width: 8px;
+            background: rgba(45, 80, 22, 0.2);
+            border-radius: 4px;
+        }
+        .text-size-slider input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            cursor: pointer;
+            border: 3px solid var(--color-white);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            margin-left: -18px;
+        }
+        .text-size-slider input[type="range"]::-moz-range-thumb {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            cursor: pointer;
+            border: 3px solid var(--color-white);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .text-size-slider input[type="range"]::-moz-range-track {
+            width: 8px;
+            background: rgba(45, 80, 22, 0.2);
+            border-radius: 4px;
+        }
+        
+        /* ===== Interview Panel ===== */
         .interview-panel {
             display: none;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             margin-bottom: 12px;
         }
         .interview-panel.visible { display: flex; }
         
         .avatar-area {
             position: relative;
-            width: 180px;
-            height: 180px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             overflow: hidden;
             border: 4px solid var(--color-primary);
             background: #e8e0d4;
+            flex-shrink: 0;
         }
         .avatar-area img, .avatar-area video {
             width: 100%;
@@ -114,49 +240,47 @@
             50% { box-shadow: 0 0 0 16px rgba(45, 80, 22, 0); }
         }
         
-        .speech-bubble {
-            background: var(--color-white);
+        .question-display {
+            background: #FEFCF3;
             border-radius: var(--radius);
             padding: 16px 20px;
-            font-size: 19px;
+            font-size: var(--transcript-size);
             line-height: 1.5;
             color: var(--color-text);
-            border: 2px solid var(--color-primary);
-            position: relative;
-            max-width: 100%;
-            text-align: center;
+            border-left: 6px solid var(--color-primary);
+            width: 100%;
+            text-align: left;
         }
-        .speech-bubble::before {
-            content: '';
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 6px solid transparent;
-            border-bottom-color: var(--color-primary);
+        .question-display .q-icon {
+            font-size: 28px;
+            margin-right: 8px;
         }
         
         .interview-thinking {
             display: none;
             color: var(--color-primary);
-            font-size: 17px;
+            font-size: 22px;
             font-weight: 600;
-            animation: thinking-dots 1.5s infinite;
+            text-align: center;
+            padding: 16px;
         }
-        .interview-thinking.visible { display: block; }
-        @keyframes thinking-dots {
-            0%, 20% { opacity: 1; }
+        .interview-thinking.visible { 
+            display: block; 
+            animation: thinking-fade 2s ease-in-out infinite;
+        }
+        @keyframes thinking-fade {
+            0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
-            80%, 100% { opacity: 1; }
         }
         
         /* ===== Main Container ===== */
         .container {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            height: 100vh;
             padding: var(--spacing);
             padding-bottom: 180px;
+            padding-right: 70px; /* room for text slider */
         }
         
         /* ===== Header ===== */
@@ -164,7 +288,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
         }
         .logo {
             font-size: 24px;
@@ -174,7 +299,7 @@
         }
         .nav-links { display: flex; gap: 8px; }
         .nav-link {
-            font-size: 18px;
+            font-size: 20px;
             color: var(--color-primary);
             text-decoration: underline;
             padding: 12px;
@@ -186,41 +311,43 @@
         /* ===== Wi-Fi Indicator ===== */
         .wifi-indicator {
             text-align: center;
-            font-size: 15px;
+            font-size: 20px;
             padding: 8px 12px;
             border-radius: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             background: rgba(45, 80, 22, 0.08);
             color: var(--color-text-light);
+            flex-shrink: 0;
         }
         
         /* ===== Status Bar ===== */
         .status-bar {
             text-align: center;
-            padding: 16px;
+            padding: 12px 16px;
             background: var(--color-white);
             border-radius: var(--radius);
-            margin-bottom: 12px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
         }
         .timer {
-            font-size: 56px;
+            font-size: 48px;
             font-weight: 700;
             color: var(--color-primary);
             font-variant-numeric: tabular-nums;
             line-height: 1.1;
         }
         .status-text {
-            font-size: 20px;
+            font-size: 22px;
             color: var(--color-text-light);
-            margin-top: 6px;
+            margin-top: 4px;
         }
         .status-text.recording { color: var(--color-green); font-weight: 600; }
         .status-text.paused { color: var(--color-red); }
         
         .saving-status {
-            font-size: 18px;
+            font-size: 20px;
             color: var(--color-primary);
-            margin-top: 8px;
+            margin-top: 6px;
             min-height: 24px;
         }
         
@@ -231,26 +358,45 @@
             border-radius: var(--radius);
             padding: var(--spacing);
             overflow-y: auto;
-            margin-bottom: 12px;
-            min-height: 180px;
+            margin-bottom: 8px;
+            min-height: 120px;
             scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
         }
         .transcript-placeholder {
             text-align: center;
             color: var(--color-text-light);
             padding: 40px 20px;
+            align-self: center;
         }
-        .transcript-text {
-            font-size: 22px;
+        .transcript-placeholder p { font-size: 22px; }
+        .transcript-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .transcript-line {
+            font-size: var(--transcript-size);
             line-height: 1.6;
             color: var(--color-text);
         }
-        .transcript-text .current {
+        .transcript-line .current {
             color: var(--color-green);
-            font-weight: 600;
+            font-weight: 700;
             background: rgba(22, 163, 74, 0.08);
             border-radius: 4px;
             padding: 0 2px;
+        }
+        .transcript-line.question-line {
+            background: #FEFCF3;
+            border-left: 5px solid var(--color-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-style: italic;
+            color: var(--color-primary-light);
         }
         
         /* ===== Paused Overlay ===== */
@@ -282,12 +428,12 @@
             margin-bottom: 12px;
         }
         .paused-overlay p {
-            font-size: 20px;
+            font-size: 22px;
             margin-bottom: 8px;
             color: var(--color-text-light);
         }
         .paused-overlay .reassurance {
-            font-size: 20px;
+            font-size: 22px;
             margin: 20px 0;
             padding: 16px 24px;
             background: rgba(45, 80, 22, 0.08);
@@ -327,11 +473,11 @@
         }
         
         .record-btn {
-            width: 110px;
-            height: 110px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             border: none;
-            font-size: 44px;
+            font-size: 48px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -355,21 +501,42 @@
             border: 2px solid var(--color-text-light);
             color: var(--color-text-light);
             border-radius: 30px;
-            padding: 10px 28px;
-            font-size: 18px;
+            padding: 12px 32px;
+            font-size: 22px;
             font-weight: 600;
             cursor: pointer;
             display: none;
+            min-height: var(--touch-min);
         }
         .break-btn.visible { display: block; }
         
         /* ===== Stats Footer ===== */
         .stats {
             text-align: center;
-            padding: 8px;
-            font-size: 15px;
+            padding: 6px;
+            font-size: 20px;
             color: var(--color-text-light);
+            flex-shrink: 0;
         }
+        
+        /* ===== Encouragements ===== */
+        .encouragement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--color-primary);
+            background: rgba(255, 248, 240, 0.95);
+            padding: 16px 32px;
+            border-radius: var(--radius);
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+        }
+        .encouragement.show { opacity: 1; }
         
         :focus { outline: 3px solid var(--color-primary); outline-offset: 2px; }
         
@@ -380,19 +547,71 @@
 </head>
 <body>
     
+    <!-- Mode Selection Screen -->
+    <div id="mode-selection" class="mode-selection-screen hidden">
+        <h2>🌿 How would you like to tell your story?</h2>
+        <p class="subtitle">Pick whichever feels most comfortable</p>
+        
+        <div class="free-talk-option" id="opt-free" onclick="selectMode('free')">
+            <span class="icon">💬</span>
+            <div>
+                <div class="label">Just Talk Freely</div>
+                <div class="desc">No questions — just share whatever comes to mind</div>
+            </div>
+        </div>
+        
+        <div class="guided-label">— or let someone guide you —</div>
+        
+        <div class="mode-card" id="opt-face" onclick="selectMode('face')">
+            <span class="icon">👩‍💼</span>
+            <div class="card-text">
+                <div class="card-title">Face to Face</div>
+                <div class="card-desc">See and hear your interviewer</div>
+            </div>
+        </div>
+        
+        <div class="mode-card" id="opt-fireside" onclick="selectMode('fireside')">
+            <span class="icon">🎙️</span>
+            <div class="card-text">
+                <div class="card-title">Fireside Chat</div>
+                <div class="card-desc">Just listen and talk</div>
+            </div>
+        </div>
+        
+        <div class="mode-card" id="opt-quiet" onclick="selectMode('quiet')">
+            <span class="icon">📝</span>
+            <div class="card-text">
+                <div class="card-title">Quiet Mode</div>
+                <div class="card-desc">Read questions silently — perfect for noisy places</div>
+            </div>
+        </div>
+        
+        <button id="begin-btn" class="begin-btn" disabled onclick="beginRecording()">🌟 Let's Begin!</button>
+    </div>
+    
     <!-- Paused Overlay -->
     <div id="paused-overlay" class="paused-overlay hidden">
         <div class="not-recording-badge">⏸ NOT RECORDING</div>
-        <h2>Taking a Break — Your story is safe, don't worry!</h2>
+        <h2>Taking a Break — Your story is safe!</h2>
         <div class="reassurance">
             <div id="saving-overlay-status">✅ Saving your words...</div>
             <div style="margin-top:8px;">Saved up to: <span id="saved-time" class="saved-time">0:00</span></div>
         </div>
         <p>Take your time. There's no rush at all. 💛</p>
         <button id="resume-btn" class="resume-btn">
-            ▶️ Resume When Ready
+            ▶️ Continue When Ready
         </button>
     </div>
+    
+    <!-- Text Size Slider -->
+    <div id="text-size-slider" class="text-size-slider">
+        <span class="big-a">A</span>
+        <input type="range" id="size-slider" min="18" max="52" value="28" oninput="changeTextSize(this.value)">
+        <span class="small-a">a</span>
+    </div>
+    
+    <!-- Encouragement popup -->
+    <div id="encouragement" class="encouragement"></div>
     
     <!-- Main Container -->
     <div class="container">
@@ -405,27 +624,6 @@
             </div>
         </div>
         
-        <!-- Interview Mode Toggle -->
-        <div class="mode-toggle">
-            <button id="mode-free" class="mode-btn active" onclick="setMode('free')">🎙️ Free Talk</button>
-            <button id="mode-guided" class="mode-btn" onclick="setMode('guided')">🤖 Guided Interview</button>
-        </div>
-        <div id="guided-coming-soon" class="guided-coming-soon">
-            <h3>🤖 Coming Soon!</h3>
-            <p>An AI interviewer will ask you questions about your life to help tell your story. Stay tuned!</p>
-        </div>
-        
-        <!-- Interview Mode Panel -->
-        <div id="interview-panel" class="interview-panel">
-            <div id="avatar-area" class="avatar-area">
-                <video id="avatar-video" style="display:none;" playsinline></video>
-                <img id="avatar-portrait" src="/static/portraits/default.jpg" alt="Interviewer"
-                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2235%22 r=%2220%22 fill=%22%232D5016%22/><ellipse cx=%2250%22 cy=%2280%22 rx=%2230%22 ry=%2220%22 fill=%22%232D5016%22/></svg>'">
-            </div>
-            <div id="speech-bubble" class="speech-bubble" style="display:none;"></div>
-            <div id="interview-thinking" class="interview-thinking">💭 Thinking of next question...</div>
-        </div>
-        
         <!-- Wi-Fi Indicator -->
         <div id="wifi-indicator" class="wifi-indicator">📶 Checking connection...</div>
         
@@ -436,20 +634,31 @@
             <div id="saving-status" class="saving-status"></div>
         </div>
         
+        <!-- Interview Panel (shown during recording in guided modes) -->
+        <div id="interview-panel" class="interview-panel">
+            <div id="avatar-area" class="avatar-area" style="display:none;">
+                <video id="avatar-video" style="display:none;" playsinline></video>
+                <img id="avatar-portrait" src="/static/portraits/default.jpg" alt="Interviewer"
+                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2235%22 r=%2220%22 fill=%22%232D5016%22/><ellipse cx=%2250%22 cy=%2280%22 rx=%2230%22 ry=%2220%22 fill=%22%232D5016%22/></svg>'">
+            </div>
+            <div id="question-display" class="question-display" style="display:none;"></div>
+            <div id="interview-thinking" class="interview-thinking">💭 Thinking of your next question...</div>
+        </div>
+        
         <!-- Transcript Area -->
         <div id="transcript-area" class="transcript-area">
             <div id="transcript-placeholder" class="transcript-placeholder">
-                <p style="font-size:40px;">🎙️</p>
+                <p style="font-size:48px;">🎙️</p>
                 <p>Your words will appear here as you speak.</p>
-                <p style="font-size: 16px; margin-top: 16px;">Just talk about your life — any memory, any story.</p>
+                <p style="margin-top: 16px;">Just talk about your life — any memory, any story.</p>
             </div>
-            <div id="transcript-text" class="transcript-text"></div>
+            <div id="transcript-content" class="transcript-content"></div>
         </div>
         
         <!-- Stats -->
         <div id="stats" class="stats">
             Total recorded: <span id="total-time">0:00</span> • 
-            <span id="chunk-count">0</span> segments saved
+            <span id="chunk-count">0</span> parts saved
         </div>
     </div>
     
@@ -484,6 +693,28 @@
         let currentChunks = [];
         let transcriptLines = [];
         
+        // Interview state
+        let selectedMode = localStorage.getItem('instabio_mode') || null;
+        let interviewMode = false;
+        let interviewSubMode = null; // 'face', 'fireside', 'quiet'
+        let interviewSessionId = null;
+        let interviewSilenceTimer = null;
+        let lastSpeechTime = Date.now();
+        let currentInterviewTranscript = '';
+        
+        // Text size
+        let textSize = parseInt(localStorage.getItem('instabio_textsize')) || 28;
+        
+        // Encouragements
+        const encouragements = [
+            "You're doing wonderful! ✨",
+            "What a great story! 💛",
+            "Keep going, this is beautiful! 🌿",
+            "Your family will treasure this! 💚",
+            "That's so interesting! 😊",
+        ];
+        let lastEncouragementTime = 0;
+        
         // DOM Elements
         const pausedOverlay = document.getElementById('paused-overlay');
         const recordBtn = document.getElementById('record-btn');
@@ -495,35 +726,66 @@
         const savingOverlayStatus = document.getElementById('saving-overlay-status');
         const transcriptArea = document.getElementById('transcript-area');
         const transcriptPlaceholder = document.getElementById('transcript-placeholder');
-        const transcriptText = document.getElementById('transcript-text');
+        const transcriptContent = document.getElementById('transcript-content');
         const savedTimeSpan = document.getElementById('saved-time');
         const totalTimeSpan = document.getElementById('total-time');
         const chunkCountSpan = document.getElementById('chunk-count');
         const wifiIndicator = document.getElementById('wifi-indicator');
+        const modeSelection = document.getElementById('mode-selection');
+        const textSizeSlider = document.getElementById('text-size-slider');
+        const sizeSliderInput = document.getElementById('size-slider');
+        const beginBtnEl = document.getElementById('begin-btn');
         
         // Auth
         const token = localStorage.getItem('instabio_token');
         if (!token) { window.location.href = '/onboard'; }
         
-        // ===== Interview Mode =====
-        let interviewMode = false;
-        let interviewSessionId = null;
-        let interviewSilenceTimer = null;
-        let lastSpeechTime = Date.now();
-        let currentInterviewTranscript = '';
-        
-        function setMode(mode) {
-            document.getElementById('mode-free').classList.toggle('active', mode === 'free');
-            document.getElementById('mode-guided').classList.toggle('active', mode === 'guided');
-            document.getElementById('guided-coming-soon').style.display = 'none';
-            document.getElementById('interview-panel').classList.toggle('visible', mode === 'guided');
-            interviewMode = mode === 'guided';
+        // ===== Mode Selection =====
+        function selectMode(mode) {
+            selectedMode = mode;
             
-            if (interviewMode && !interviewSessionId) {
-                // Will start interview when recording starts
-            }
+            // Clear all selections
+            document.querySelectorAll('.mode-card, .free-talk-option').forEach(el => el.classList.remove('selected'));
+            
+            // Highlight selected
+            const map = { free: 'opt-free', face: 'opt-face', fireside: 'opt-fireside', quiet: 'opt-quiet' };
+            document.getElementById(map[mode]).classList.add('selected');
+            
+            beginBtnEl.disabled = false;
+            localStorage.setItem('instabio_mode', mode);
         }
         
+        function showModeSelection() {
+            modeSelection.classList.remove('hidden');
+            if (selectedMode) selectMode(selectedMode);
+        }
+        
+        function beginRecording() {
+            if (!selectedMode) return;
+            modeSelection.classList.add('hidden');
+            
+            if (selectedMode === 'free') {
+                interviewMode = false;
+                interviewSubMode = null;
+            } else {
+                interviewMode = true;
+                interviewSubMode = selectedMode; // 'face', 'fireside', 'quiet'
+            }
+            
+            startRecording();
+        }
+        
+        // ===== Text Size =====
+        function changeTextSize(val) {
+            textSize = parseInt(val);
+            document.documentElement.style.setProperty('--transcript-size', textSize + 'px');
+            localStorage.setItem('instabio_textsize', textSize);
+        }
+        // Initialize text size
+        sizeSliderInput.value = textSize;
+        changeTextSize(textSize);
+        
+        // ===== Interview Functions =====
         async function startInterview() {
             try {
                 const resp = await fetch(`${API_URL}/interview/start`, {
@@ -544,45 +806,74 @@
         }
         
         function showInterviewQuestion(question, videoUrl, portrait) {
-            const bubble = document.getElementById('speech-bubble');
+            const questionDisplay = document.getElementById('question-display');
             const avatarArea = document.getElementById('avatar-area');
             const avatarVideo = document.getElementById('avatar-video');
             const avatarImg = document.getElementById('avatar-portrait');
             const thinking = document.getElementById('interview-thinking');
             
             thinking.classList.remove('visible');
-            bubble.textContent = question;
-            bubble.style.display = 'block';
             
-            if (videoUrl) {
-                avatarVideo.src = videoUrl;
-                avatarVideo.style.display = 'block';
-                avatarImg.style.display = 'none';
-                avatarVideo.play().catch(() => {});
-                avatarArea.classList.add('speaking');
-                avatarVideo.onended = () => avatarArea.classList.remove('speaking');
-            } else {
-                // Fallback: pulse portrait + browser TTS
-                avatarVideo.style.display = 'none';
-                avatarImg.style.display = 'block';
-                if (portrait && portrait.image_url) avatarImg.src = portrait.image_url;
-                avatarArea.classList.add('speaking');
+            // Add question to transcript as a special line
+            addQuestionToTranscript(question);
+            
+            // Configure based on sub-mode
+            if (interviewSubMode === 'face') {
+                avatarArea.style.display = 'block';
+                questionDisplay.style.display = 'block';
+                questionDisplay.innerHTML = `<span class="q-icon">👩‍💼</span> ${question}`;
                 
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(question);
-                    utterance.rate = 0.9;
-                    utterance.pitch = 1.1;
-                    utterance.onend = () => avatarArea.classList.remove('speaking');
-                    speechSynthesis.speak(utterance);
+                if (videoUrl) {
+                    avatarVideo.src = videoUrl;
+                    avatarVideo.style.display = 'block';
+                    avatarImg.style.display = 'none';
+                    avatarVideo.play().catch(() => {});
+                    avatarArea.classList.add('speaking');
+                    avatarVideo.onended = () => avatarArea.classList.remove('speaking');
                 } else {
-                    setTimeout(() => avatarArea.classList.remove('speaking'), 3000);
+                    avatarVideo.style.display = 'none';
+                    avatarImg.style.display = 'block';
+                    if (portrait && portrait.image_url) avatarImg.src = portrait.image_url;
+                    avatarArea.classList.add('speaking');
+                    speakQuestion(question, () => avatarArea.classList.remove('speaking'));
                 }
+            } else if (interviewSubMode === 'fireside') {
+                avatarArea.style.display = 'none';
+                questionDisplay.style.display = 'block';
+                questionDisplay.innerHTML = `<span class="q-icon">🎙️</span> ${question}`;
+                speakQuestion(question);
+            } else if (interviewSubMode === 'quiet') {
+                avatarArea.style.display = 'none';
+                questionDisplay.style.display = 'block';
+                questionDisplay.innerHTML = `<span class="q-icon">📝</span> ${question}`;
+                // No voice in quiet mode
             }
             
-            // Reset transcript tracking for next answer
             currentInterviewTranscript = '';
             lastSpeechTime = Date.now();
             startSilenceDetection();
+        }
+        
+        function speakQuestion(text, onEnd) {
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.85;
+                utterance.pitch = 1.05;
+                if (onEnd) utterance.onend = onEnd;
+                speechSynthesis.speak(utterance);
+            } else if (onEnd) {
+                setTimeout(onEnd, 3000);
+            }
+        }
+        
+        function addQuestionToTranscript(question) {
+            const div = document.createElement('div');
+            div.className = 'transcript-line question-line';
+            div.style.fontSize = 'var(--transcript-size)';
+            div.textContent = question;
+            transcriptContent.appendChild(div);
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
         }
         
         function startSilenceDetection() {
@@ -627,16 +918,14 @@
         function updateWifiIndicator() {
             const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             if (conn) {
-                const dominated = conn.downlink < 1 || conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g';
-                if (dominated) {
-                    wifiIndicator.textContent = "📱 Saving to your phone — we'll upload when you have better Wi-Fi";
-                } else {
-                    wifiIndicator.textContent = "📶 Strong connection — saving as you speak";
-                }
+                const slow = conn.downlink < 1 || conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g';
+                wifiIndicator.textContent = slow
+                    ? "📱 Saving to your phone — we'll send it when Wi-Fi is better"
+                    : "📶 Good connection — saving as you speak";
             } else {
                 wifiIndicator.textContent = navigator.onLine
-                    ? "📶 Strong connection — saving as you speak"
-                    : "📱 Saving to your phone — we'll upload when you have better Wi-Fi";
+                    ? "📶 Good connection — saving as you speak"
+                    : "📱 Saving to your phone — we'll send it when Wi-Fi is better";
             }
         }
         updateWifiIndicator();
@@ -686,7 +975,6 @@
         }
         
         // ===== Recording Functions =====
-        
         function createRecorder() {
             const rec = new MediaRecorder(audioStream, { mimeType: 'audio/webm;codecs=opus' });
             rec.ondataavailable = (e) => {
@@ -714,7 +1002,7 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Failed to start session');
+                if (!response.ok) throw new Error(data.detail || 'Failed to start');
                 
                 sessionUUID = data.session_uuid;
                 sessionId = data.session_id;
@@ -739,14 +1027,19 @@
                 startTimer();
                 startSpeechRecognition();
                 
-                // Start interview if in guided mode
-                if (interviewMode && !interviewSessionId) {
-                    startInterview();
+                // Show text size slider
+                textSizeSlider.classList.add('visible');
+                
+                // Show interview panel if guided mode
+                if (interviewMode) {
+                    document.getElementById('interview-panel').classList.add('visible');
+                    if (!interviewSessionId) startInterview();
                 }
                 
             } catch (err) {
                 console.error('Failed to start recording:', err);
-                alert('Could not access microphone. Please allow microphone access and try again.');
+                statusText.textContent = "Could not access microphone. Please allow microphone access and try again.";
+                statusText.style.color = 'var(--color-red)';
             }
         }
         
@@ -797,9 +1090,9 @@
             if (chunkInterval) { clearInterval(chunkInterval); chunkInterval = null; }
             
             stopSpeechRecognition();
+            if ('speechSynthesis' in window) speechSynthesis.cancel();
             updateUI('paused');
             
-            // Show saving status
             savingOverlayStatus.textContent = '✅ Saving your words...';
             setTimeout(() => {
                 const mins = Math.floor(pausedTime / 60000);
@@ -837,11 +1130,13 @@
             
             stopTimer();
             stopSpeechRecognition();
+            if ('speechSynthesis' in window) speechSynthesis.cancel();
             updateUI('ready');
+            textSizeSlider.classList.remove('visible');
             
-            // Clean up interview
             if (interviewSilenceTimer) { clearInterval(interviewSilenceTimer); interviewSilenceTimer = null; }
             interviewSessionId = null;
+            document.getElementById('interview-panel').classList.remove('visible');
         }
         
         // ===== Timer =====
@@ -853,6 +1148,13 @@
             const elapsed = pausedTime + (Date.now() - recordingStartTime);
             timerDisplay.textContent = formatTime(elapsed);
             savedTimeSpan.textContent = formatTime(elapsed);
+            
+            // Occasional encouragement
+            const now = Date.now();
+            if (now - lastEncouragementTime > 120000 && elapsed > 60000) {
+                lastEncouragementTime = now;
+                showEncouragement();
+            }
         }
         
         function formatTime(ms) {
@@ -862,6 +1164,13 @@
             const seconds = totalSeconds % 60;
             if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function showEncouragement() {
+            const el = document.getElementById('encouragement');
+            el.textContent = encouragements[Math.floor(Math.random() * encouragements.length)];
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 3000);
         }
         
         // ===== Speech Recognition =====
@@ -896,20 +1205,34 @@
                         currentInterviewTranscript += finalTranscript;
                         lastSpeechTime = Date.now();
                     }
-                    // Buffer management: keep last ~500 lines
                     if (transcriptLines.length > MAX_TRANSCRIPT_LINES) {
                         transcriptLines = transcriptLines.slice(-Math.floor(MAX_TRANSCRIPT_LINES * 0.8));
                     }
+                    
+                    // Add final text as a new line element
+                    const div = document.createElement('div');
+                    div.className = 'transcript-line';
+                    div.style.fontSize = 'var(--transcript-size)';
+                    div.textContent = finalTranscript;
+                    transcriptContent.appendChild(div);
                 }
                 
-                // Rebuild display
-                let html = transcriptLines.join('');
+                // Update or create interim element
+                let interimEl = document.getElementById('interim-text');
                 if (interimTranscript) {
-                    html += `<span class="current">${interimTranscript}</span>`;
+                    if (!interimEl) {
+                        interimEl = document.createElement('div');
+                        interimEl.id = 'interim-text';
+                        interimEl.className = 'transcript-line';
+                        interimEl.style.fontSize = 'var(--transcript-size)';
+                        transcriptContent.appendChild(interimEl);
+                    }
+                    interimEl.innerHTML = `<span class="current">${interimTranscript}</span>`;
+                } else if (interimEl) {
+                    interimEl.remove();
                 }
-                transcriptText.innerHTML = html;
                 
-                // Auto-scroll to bottom
+                // Auto-scroll always
                 transcriptArea.scrollTop = transcriptArea.scrollHeight;
             };
             
@@ -956,7 +1279,7 @@
                     pausedOverlay.classList.add('hidden');
                     recordBtn.className = 'record-btn recording';
                     recordBtn.innerHTML = '🎙️';
-                    recordBtn.setAttribute('aria-label', 'Recording in progress');
+                    recordBtn.setAttribute('aria-label', 'Recording — you\'re doing great!');
                     breakBtn.classList.add('visible');
                     statusText.className = 'status-text recording';
                     statusText.textContent = "I'm listening... keep talking, you're doing great! ✨";
@@ -976,11 +1299,11 @@
         // ===== Event Listeners =====
         recordBtn.addEventListener('click', () => {
             if (!isRecording) {
-                startRecording();
+                // Show mode selection screen
+                showModeSelection();
             } else if (isPaused) {
                 resumeRecording();
             }
-            // While recording, the main button stays as a mic icon; pause is via break button
         });
         
         resumeBtn.addEventListener('click', () => { resumeRecording(); });
@@ -992,7 +1315,7 @@
         });
         
         window.addEventListener('beforeunload', (e) => {
-            if (isRecording) { e.preventDefault(); e.returnValue = 'You have an active recording. Are you sure you want to leave?'; }
+            if (isRecording) { e.preventDefault(); e.returnValue = 'You have a story being recorded. Are you sure you want to leave?'; }
         });
         
         // ===== Initialize =====
