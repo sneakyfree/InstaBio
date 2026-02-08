@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2D5016">
+    <title>Recording — InstaBio</title>
+    <link rel="manifest" href="/manifest.json">
+    
+    <style>
+        /* ===== Variables ===== */
+        :root {
+            --color-primary: #2D5016;
+            --color-primary-light: #3D6B1E;
+            --color-background: #FFF8F0;
+            --color-white: #FFFFFF;
+            --color-text: #1A1A1A;
+            --color-text-light: #4A4A4A;
+            --color-recording: #2D5016;
+            --color-paused: #B91C1C;
+            --border-width: 8px;
+            --font-body: 20px;
+            --touch-min: 64px;
+            --spacing: 24px;
+            --radius: 16px;
+        }
+        
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: var(--font-body);
+            line-height: 1.5;
+            color: var(--color-text);
+            background: var(--color-background);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* ===== Recording Border Frame ===== */
+        .recording-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: var(--border-width) solid transparent;
+            pointer-events: none;
+            z-index: 1000;
+            transition: border-color 0.3s;
+        }
+        
+        /* Green pulse when recording */
+        .recording-frame.recording {
+            border-color: var(--color-recording);
+            animation: pulse-green 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { border-color: var(--color-recording); opacity: 1; }
+            50% { border-color: #4A8F2A; opacity: 0.7; }
+        }
+        
+        /* Red flash when paused/interrupted */
+        .recording-frame.paused {
+            border-color: var(--color-paused);
+            animation: flash-red 0.5s ease-in-out;
+        }
+        
+        @keyframes flash-red {
+            0%, 100% { border-color: var(--color-paused); opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* ===== Main Container ===== */
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: calc(var(--border-width) + var(--spacing));
+            padding-bottom: calc(var(--border-width) + 100px);
+        }
+        
+        /* ===== Header ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        
+        .nav-link {
+            font-size: 18px;
+            color: var(--color-primary);
+            text-decoration: underline;
+            padding: 12px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* ===== Status Bar ===== */
+        .status-bar {
+            text-align: center;
+            padding: 16px;
+            background: var(--color-white);
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+        }
+        
+        .timer {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--color-primary);
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .status-text {
+            font-size: 18px;
+            color: var(--color-text-light);
+            margin-top: 4px;
+        }
+        
+        .status-text.recording {
+            color: var(--color-recording);
+        }
+        
+        .status-text.paused {
+            color: var(--color-paused);
+        }
+        
+        /* ===== Transcript Area ===== */
+        .transcript-area {
+            flex: 1;
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: var(--spacing);
+            overflow-y: auto;
+            margin-bottom: 16px;
+            min-height: 200px;
+        }
+        
+        .transcript-placeholder {
+            text-align: center;
+            color: var(--color-text-light);
+            padding: 40px 20px;
+        }
+        
+        .transcript-text {
+            font-size: 22px;
+            line-height: 1.6;
+            color: var(--color-text);
+        }
+        
+        .transcript-text .current {
+            color: var(--color-primary);
+            font-weight: 500;
+        }
+        
+        /* ===== Paused Overlay ===== */
+        .paused-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(185, 28, 28, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            padding: var(--spacing);
+            text-align: center;
+            color: var(--color-white);
+        }
+        
+        .paused-overlay.hidden {
+            display: none;
+        }
+        
+        .paused-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+        }
+        
+        .paused-overlay h2 {
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+        
+        .paused-overlay p {
+            font-size: 22px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+        
+        .paused-overlay .reassurance {
+            font-size: 20px;
+            margin: 24px 0;
+            padding: 16px;
+            background: rgba(255,255,255,0.15);
+            border-radius: var(--radius);
+        }
+        
+        .paused-overlay .saved-time {
+            font-weight: 700;
+        }
+        
+        /* ===== Recording Button ===== */
+        .record-button-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: var(--spacing);
+            background: linear-gradient(transparent, var(--color-background) 20%);
+            display: flex;
+            justify-content: center;
+            z-index: 100;
+        }
+        
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            font-size: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .record-btn.ready {
+            background: var(--color-primary);
+            color: var(--color-white);
+        }
+        
+        .record-btn.ready:hover {
+            transform: scale(1.05);
+            background: var(--color-primary-light);
+        }
+        
+        .record-btn.recording {
+            background: var(--color-paused);
+            color: var(--color-white);
+        }
+        
+        .record-btn.recording:hover {
+            transform: scale(1.05);
+        }
+        
+        .resume-btn {
+            width: 100%;
+            max-width: 300px;
+            min-height: 80px;
+            background: var(--color-white);
+            color: var(--color-paused);
+            border: none;
+            border-radius: var(--radius);
+            font-size: 28px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 32px;
+        }
+        
+        .resume-btn:hover {
+            transform: scale(1.02);
+        }
+        
+        /* ===== Stats Footer ===== */
+        .stats {
+            text-align: center;
+            padding: 8px;
+            font-size: 16px;
+            color: var(--color-text-light);
+        }
+        
+        /* ===== Accessibility ===== */
+        :focus {
+            outline: 3px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Recording Border Frame -->
+    <div id="recording-frame" class="recording-frame"></div>
+    
+    <!-- Paused Overlay -->
+    <div id="paused-overlay" class="paused-overlay hidden">
+        <div class="paused-icon">⚠️</div>
+        <h2>Recording Paused</h2>
+        <p>Don't worry — everything before this is saved.</p>
+        <div class="reassurance">
+            ✅ Saved up to: <span id="saved-time" class="saved-time">0:00</span>
+        </div>
+        <p>Take your time. Continue when you're ready.</p>
+        <button id="resume-btn" class="resume-btn">
+            ▶️ Resume Recording
+        </button>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🌿 InstaBio</div>
+            <a href="/vault" class="nav-link">My Vault →</a>
+        </div>
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div id="timer" class="timer">0:00</div>
+            <div id="status-text" class="status-text">Tap the button to start recording</div>
+        </div>
+        
+        <!-- Transcript Area -->
+        <div id="transcript-area" class="transcript-area">
+            <div id="transcript-placeholder" class="transcript-placeholder">
+                <p>🎙️</p>
+                <p>Your words will appear here as you speak.</p>
+                <p style="font-size: 16px; margin-top: 16px;">Just talk about your life — any memory, any story.</p>
+            </div>
+            <div id="transcript-text" class="transcript-text"></div>
+        </div>
+        
+        <!-- Stats -->
+        <div id="stats" class="stats">
+            Total recorded: <span id="total-time">0:00</span> • 
+            <span id="chunk-count">0</span> segments saved
+        </div>
+    </div>
+    
+    <!-- Record Button -->
+    <div class="record-button-area">
+        <button id="record-btn" class="record-btn ready" aria-label="Start recording">
+            🎙️
+        </button>
+    </div>
+    
+    <script>
+        // ===== InstaBio Recording Engine =====
+        // Zero data loss architecture: chunks saved locally, uploaded in background
+        
+        const API_URL = '/api';
+        const CHUNK_DURATION_MS = 30000; // 30 seconds per chunk
+        
+        // State
+        let isRecording = false;
+        let isPaused = false;
+        let mediaRecorder = null;
+        let audioStream = null;
+        let sessionUUID = null;
+        let sessionId = null;
+        let chunkIndex = 0;
+        let recordingStartTime = null;
+        let pausedTime = 0;
+        let timerInterval = null;
+        let recognition = null;
+        let uploadQueue = [];
+        let currentChunks = [];
+        
+        // DOM Elements
+        const recordingFrame = document.getElementById('recording-frame');
+        const pausedOverlay = document.getElementById('paused-overlay');
+        const recordBtn = document.getElementById('record-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const timerDisplay = document.getElementById('timer');
+        const statusText = document.getElementById('status-text');
+        const transcriptArea = document.getElementById('transcript-area');
+        const transcriptPlaceholder = document.getElementById('transcript-placeholder');
+        const transcriptText = document.getElementById('transcript-text');
+        const savedTimeSpan = document.getElementById('saved-time');
+        const totalTimeSpan = document.getElementById('total-time');
+        const chunkCountSpan = document.getElementById('chunk-count');
+        
+        // Auth
+        const token = localStorage.getItem('instabio_token');
+        const userName = localStorage.getItem('instabio_name');
+        
+        if (!token) {
+            window.location.href = '/onboard';
+        }
+        
+        // ===== IndexedDB for Local Storage =====
+        let db = null;
+        
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('InstaBioDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains('chunks')) {
+                        database.createObjectStore('chunks', { keyPath: 'id', autoIncrement: true });
+                    }
+                    if (!database.objectStoreNames.contains('queue')) {
+                        database.createObjectStore('queue', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+            });
+        }
+        
+        async function saveChunkLocally(blob, sessionUUID, chunkIndex, duration) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('chunks', 'readwrite');
+                const store = tx.objectStore('chunks');
+                
+                const chunk = {
+                    sessionUUID,
+                    chunkIndex,
+                    duration,
+                    blob,
+                    timestamp: Date.now(),
+                    uploaded: false
+                };
+                
+                const request = store.add(chunk);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+        
+        async function queueForUpload(chunkId) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('queue', 'readwrite');
+                const store = tx.objectStore('queue');
+                
+                const request = store.add({ chunkId, timestamp: Date.now() });
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+        
+        // ===== Recording Functions =====
+        
+        async function startRecording() {
+            try {
+                // Request microphone access
+                audioStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                // Start new session on server
+                const response = await fetch(`${API_URL}/session/start`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Failed to start session');
+                
+                sessionUUID = data.session_uuid;
+                sessionId = data.session_id;
+                chunkIndex = 0;
+                
+                // Setup MediaRecorder with chunking
+                mediaRecorder = new MediaRecorder(audioStream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+                
+                currentChunks = [];
+                
+                mediaRecorder.ondataavailable = async (e) => {
+                    if (e.data.size > 0) {
+                        currentChunks.push(e.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    // Save the final chunk
+                    if (currentChunks.length > 0) {
+                        await saveCurrentChunk();
+                    }
+                };
+                
+                // Start recording with chunks every 30 seconds
+                mediaRecorder.start(CHUNK_DURATION_MS);
+                
+                // Save chunks periodically
+                setInterval(async () => {
+                    if (isRecording && currentChunks.length > 0) {
+                        await saveCurrentChunk();
+                    }
+                }, CHUNK_DURATION_MS);
+                
+                // Update UI
+                isRecording = true;
+                isPaused = false;
+                recordingStartTime = Date.now();
+                pausedTime = 0;
+                
+                updateUI('recording');
+                startTimer();
+                startSpeechRecognition();
+                
+            } catch (err) {
+                console.error('Failed to start recording:', err);
+                alert('Could not access microphone. Please allow microphone access and try again.');
+            }
+        }
+        
+        async function saveCurrentChunk() {
+            if (currentChunks.length === 0) return;
+            
+            const blob = new Blob(currentChunks, { type: 'audio/webm' });
+            currentChunks = [];
+            
+            const duration = CHUNK_DURATION_MS / 1000;
+            
+            // Save to IndexedDB first (zero data loss)
+            try {
+                const chunkId = await saveChunkLocally(blob, sessionUUID, chunkIndex, duration);
+                await queueForUpload(chunkId);
+                chunkIndex++;
+                
+                // Update chunk count
+                chunkCountSpan.textContent = chunkIndex;
+                
+                // Upload in background
+                uploadChunk(blob, chunkIndex - 1, duration);
+                
+            } catch (err) {
+                console.error('Failed to save chunk locally:', err);
+            }
+        }
+        
+        async function uploadChunk(blob, index, duration) {
+            const formData = new FormData();
+            formData.append('audio', blob, `chunk_${index}.webm`);
+            formData.append('session_uuid', sessionUUID);
+            formData.append('chunk_index', index);
+            formData.append('duration', duration);
+            
+            try {
+                const response = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    console.error('Upload failed, will retry');
+                    uploadQueue.push({ blob, index, duration });
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                uploadQueue.push({ blob, index, duration });
+            }
+        }
+        
+        function pauseRecording() {
+            if (!isRecording || isPaused) return;
+            
+            isPaused = true;
+            pausedTime += Date.now() - recordingStartTime;
+            
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.pause();
+            }
+            
+            stopSpeechRecognition();
+            updateUI('paused');
+            
+            // Save what we have
+            saveCurrentChunk();
+        }
+        
+        function resumeRecording() {
+            if (!isRecording || !isPaused) return;
+            
+            isPaused = false;
+            recordingStartTime = Date.now();
+            
+            if (mediaRecorder && mediaRecorder.state === 'paused') {
+                mediaRecorder.resume();
+            }
+            
+            updateUI('recording');
+            startSpeechRecognition();
+        }
+        
+        async function stopRecording() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            isPaused = false;
+            
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+            }
+            
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            
+            stopTimer();
+            stopSpeechRecognition();
+            updateUI('ready');
+        }
+        
+        // ===== Timer =====
+        
+        function startTimer() {
+            timerInterval = setInterval(updateTimer, 100);
+        }
+        
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+        
+        function updateTimer() {
+            if (isPaused) return;
+            
+            const elapsed = pausedTime + (Date.now() - recordingStartTime);
+            timerDisplay.textContent = formatTime(elapsed);
+            savedTimeSpan.textContent = formatTime(elapsed);
+        }
+        
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // ===== Speech Recognition (for live transcription) =====
+        
+        function startSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.log('Speech recognition not supported');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = navigator.language || 'en-US';
+            
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                let interimTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // Update display
+                transcriptPlaceholder.style.display = 'none';
+                
+                if (finalTranscript) {
+                    transcriptText.innerHTML += finalTranscript;
+                }
+                
+                if (interimTranscript) {
+                    // Show current words being spoken
+                    const existingText = transcriptText.innerHTML.replace(/<span class="current">.*<\/span>/, '');
+                    transcriptText.innerHTML = existingText + `<span class="current">${interimTranscript}</span>`;
+                }
+                
+                // Auto-scroll
+                transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            };
+            
+            recognition.onerror = (event) => {
+                console.log('Speech recognition error:', event.error);
+                if (event.error === 'no-speech' && isRecording && !isPaused) {
+                    // Restart recognition
+                    setTimeout(() => {
+                        if (isRecording && !isPaused) {
+                            recognition.start();
+                        }
+                    }, 100);
+                }
+            };
+            
+            recognition.onend = () => {
+                if (isRecording && !isPaused) {
+                    // Restart recognition
+                    setTimeout(() => {
+                        if (isRecording && !isPaused && recognition) {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.log('Recognition restart failed:', e);
+                            }
+                        }
+                    }, 100);
+                }
+            };
+            
+            try {
+                recognition.start();
+            } catch (e) {
+                console.log('Failed to start recognition:', e);
+            }
+        }
+        
+        function stopSpeechRecognition() {
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.log('Failed to stop recognition:', e);
+                }
+            }
+        }
+        
+        // ===== UI Updates =====
+        
+        function updateUI(state) {
+            switch (state) {
+                case 'ready':
+                    recordingFrame.className = 'recording-frame';
+                    pausedOverlay.classList.add('hidden');
+                    recordBtn.className = 'record-btn ready';
+                    recordBtn.innerHTML = '🎙️';
+                    recordBtn.setAttribute('aria-label', 'Start recording');
+                    statusText.className = 'status-text';
+                    statusText.textContent = 'Tap the button to start recording';
+                    break;
+                    
+                case 'recording':
+                    recordingFrame.className = 'recording-frame recording';
+                    pausedOverlay.classList.add('hidden');
+                    recordBtn.className = 'record-btn recording';
+                    recordBtn.innerHTML = '⏸️';
+                    recordBtn.setAttribute('aria-label', 'Pause recording');
+                    statusText.className = 'status-text recording';
+                    statusText.textContent = '● Recording — speak freely';
+                    break;
+                    
+                case 'paused':
+                    recordingFrame.className = 'recording-frame paused';
+                    pausedOverlay.classList.remove('hidden');
+                    statusText.className = 'status-text paused';
+                    statusText.textContent = '⏸ Paused';
+                    break;
+            }
+        }
+        
+        // ===== Event Listeners =====
+        
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            } else if (isPaused) {
+                resumeRecording();
+            } else {
+                pauseRecording();
+            }
+        });
+        
+        resumeBtn.addEventListener('click', () => {
+            resumeRecording();
+        });
+        
+        // Handle visibility changes (app backgrounded)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isRecording && !isPaused) {
+                // Continue recording in background if possible
+                // Show notification on return
+                console.log('App backgrounded - recording continues');
+            } else if (!document.hidden && isRecording) {
+                console.log('App foregrounded');
+            }
+        });
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', (e) => {
+            if (isRecording) {
+                e.preventDefault();
+                e.returnValue = 'You have an active recording. Are you sure you want to leave?';
+            }
+        });
+        
+        // ===== Initialize =====
+        
+        async function init() {
+            await initDB();
+            
+            // Load user stats
+            try {
+                const response = await fetch(`${API_URL}/user/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    totalTimeSpan.textContent = data.total_duration_formatted || '0:00';
+                    chunkCountSpan.textContent = data.total_chunks || 0;
+                }
+            } catch (err) {
+                console.log('Failed to load stats:', err);
+            }
+            
+            // Process any queued uploads
+            processUploadQueue();
+        }
+        
+        async function processUploadQueue() {
+            // Retry any failed uploads
+            while (uploadQueue.length > 0) {
+                const item = uploadQueue.shift();
+                await uploadChunk(item.blob, item.index, item.duration);
+            }
+            
+            // Check again in 30 seconds
+            setTimeout(processUploadQueue, 30000);
+        }
+        
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+{
+    "name": "InstaBio",
+    "short_name": "InstaBio",
+    "description": "Your story. Forever. — Preserve your life in your own voice.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#FFF8F0",
+    "theme_color": "#2D5016",
+    "orientation": "portrait-primary",
+    "categories": ["lifestyle", "productivity", "social"],
+    "icons": [
+        {
+            "src": "/static/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Record",
+            "short_name": "Record",
+            "description": "Start recording your story",
+            "url": "/record",
+            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "My Vault",
+            "short_name": "Vault",
+            "description": "View your recordings and transcripts",
+            "url": "/vault",
+            "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
+        }
+    ],
+    "prefer_related_applications": false,
+    "lang": "en",
+    "dir": "ltr"
+}

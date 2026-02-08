@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="InstaBio - Your story. Forever. Preserve your life story in your own voice.">
+    <meta name="theme-color" content="#2D5016">
+    
+    <title>InstaBio — Your Story. Forever.</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    
+    <style>
+        /* ===== CSS Reset & Variables ===== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            /* Brand Colors - Forest Green + Warm Cream */
+            --color-primary: #2D5016;
+            --color-primary-light: #3D6B1E;
+            --color-primary-dark: #1E3610;
+            --color-background: #FFF8F0;
+            --color-background-alt: #FFF0E0;
+            --color-text: #1A1A1A;
+            --color-text-light: #4A4A4A;
+            --color-white: #FFFFFF;
+            --color-success: #2D5016;
+            --color-error: #B91C1C;
+            
+            /* Typography - Large & Readable */
+            --font-body: 20px;
+            --font-header: 32px;
+            --font-hero: 44px;
+            --font-button: 24px;
+            --line-height: 1.5;
+            
+            /* Touch Targets - Arthritis-Friendly */
+            --touch-min: 64px;
+            --spacing: 24px;
+            --radius: 16px;
+        }
+        
+        html {
+            font-size: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: var(--font-body);
+            line-height: var(--line-height);
+            color: var(--color-text);
+            background: var(--color-background);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* ===== Layout ===== */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: var(--spacing);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        /* ===== Logo & Branding ===== */
+        .logo {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+        
+        .logo-icon {
+            display: inline-block;
+            width: 48px;
+            height: 48px;
+            background: var(--color-primary);
+            border-radius: 50%;
+            margin-right: 12px;
+            vertical-align: middle;
+            position: relative;
+        }
+        
+        .logo-icon::after {
+            content: "🌿";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }
+        
+        /* ===== Hero Section ===== */
+        .hero {
+            margin: 40px 0;
+        }
+        
+        .hero h1 {
+            font-size: var(--font-hero);
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+        
+        .hero p {
+            font-size: var(--font-header);
+            color: var(--color-text-light);
+            margin-bottom: 8px;
+        }
+        
+        .tagline {
+            font-size: 24px;
+            color: var(--color-primary);
+            font-style: italic;
+            margin-top: 24px;
+        }
+        
+        /* ===== Buttons ===== */
+        .btn {
+            display: inline-block;
+            min-height: var(--touch-min);
+            min-width: 200px;
+            padding: 20px 40px;
+            font-size: var(--font-button);
+            font-weight: 600;
+            text-decoration: none;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: var(--color-primary);
+            color: var(--color-white);
+        }
+        
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background: var(--color-primary-light);
+            transform: scale(1.02);
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        /* ===== CTA Section ===== */
+        .cta {
+            margin-top: 48px;
+        }
+        
+        .secondary-link {
+            display: block;
+            margin-top: 24px;
+            font-size: var(--font-body);
+            color: var(--color-primary);
+            text-decoration: underline;
+            padding: 16px;
+        }
+        
+        .secondary-link:hover {
+            color: var(--color-primary-light);
+        }
+        
+        /* ===== Features ===== */
+        .features {
+            margin-top: 64px;
+            text-align: left;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--color-white);
+            border-radius: var(--radius);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .feature-icon {
+            font-size: 32px;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+        
+        .feature h3 {
+            font-size: 22px;
+            color: var(--color-primary);
+            margin-bottom: 4px;
+        }
+        
+        .feature p {
+            font-size: 18px;
+            color: var(--color-text-light);
+        }
+        
+        /* ===== Footer ===== */
+        footer {
+            text-align: center;
+            padding: var(--spacing);
+            color: var(--color-text-light);
+            font-size: 16px;
+        }
+        
+        /* ===== Accessibility ===== */
+        :focus {
+            outline: 3px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+        
+        /* ===== Large Screens ===== */
+        @media (min-width: 768px) {
+            .hero h1 {
+                font-size: 56px;
+            }
+            
+            .container {
+                padding: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo -->
+        <div class="logo">
+            <span class="logo-icon"></span>InstaBio
+        </div>
+        
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Your Story.<br>Forever.</h1>
+            <p>Preserve your life in your own voice.</p>
+            <p class="tagline">"Just talk. We'll remember."</p>
+        </div>
+        
+        <!-- Primary CTA -->
+        <div class="cta">
+            <a href="/onboard" class="btn btn-primary" role="button">
+                Start Your Story
+            </a>
+            <a href="/onboard?returning=true" class="secondary-link">
+                Already have an account? Continue →
+            </a>
+        </div>
+        
+        <!-- Features -->
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">🎙️</span>
+                <div>
+                    <h3>Just Talk</h3>
+                    <p>Tap the button and share your memories. That's it.</p>
+                </div>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">📖</span>
+                <div>
+                    <h3>Your Life Story</h3>
+                    <p>We turn your words into a beautiful biography.</p>
+                </div>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">💚</span>
+                <div>
+                    <h3>Forever Preserved</h3>
+                    <p>Your voice and stories, kept safe for generations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Made with love for every story that matters.</p>
+    </footer>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('InstaBio ready for offline use'))
+                .catch(err => console.log('SW registration failed:', err));
+        }
+    </script>
+</body>
+</html>
