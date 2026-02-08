@@ -397,6 +397,7 @@
         let sessionUUID = null;
         let sessionId = null;
         let chunkIndex = 0;
+        let chunkInterval = null;
         let recordingStartTime = null;
         let pausedTime = 0;
         let timerInterval = null;
@@ -508,33 +509,40 @@
                 sessionId = data.session_id;
                 chunkIndex = 0;
                 
-                // Setup MediaRecorder with chunking
-                mediaRecorder = new MediaRecorder(audioStream, {
-                    mimeType: 'audio/webm;codecs=opus'
-                });
-                
+                // Setup MediaRecorder — stop/restart approach so each chunk
+                // is a self-contained WebM file with proper headers
                 currentChunks = [];
                 
-                mediaRecorder.ondataavailable = async (e) => {
-                    if (e.data.size > 0) {
-                        currentChunks.push(e.data);
-                    }
-                };
+                function createRecorder() {
+                    const rec = new MediaRecorder(audioStream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    rec.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            currentChunks.push(e.data);
+                        }
+                    };
+                    rec.onstop = async () => {
+                        if (currentChunks.length > 0) {
+                            await saveCurrentChunk();
+                        }
+                        // Restart if still recording (chunk boundary)
+                        if (isRecording && !isPaused) {
+                            currentChunks = [];
+                            mediaRecorder = createRecorder();
+                            mediaRecorder.start();
+                        }
+                    };
+                    return rec;
+                }
                 
-                mediaRecorder.onstop = async () => {
-                    // Save the final chunk
-                    if (currentChunks.length > 0) {
-                        await saveCurrentChunk();
-                    }
-                };
+                mediaRecorder = createRecorder();
+                mediaRecorder.start();
                 
-                // Start recording with chunks every 30 seconds
-                mediaRecorder.start(CHUNK_DURATION_MS);
-                
-                // Save chunks periodically
-                setInterval(async () => {
-                    if (isRecording && currentChunks.length > 0) {
-                        await saveCurrentChunk();
+                // Stop and restart recorder every 30s to create valid chunks
+                chunkInterval = setInterval(() => {
+                    if (isRecording && !isPaused && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop(); // triggers onstop → save → restart
                     }
                 }, CHUNK_DURATION_MS);
                 
@@ -609,15 +617,18 @@
             isPaused = true;
             pausedTime += Date.now() - recordingStartTime;
             
+            // Stop recorder to save current chunk as valid WebM
             if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.pause();
+                mediaRecorder.stop(); // onstop won't restart because isPaused=true
+            }
+            
+            if (chunkInterval) {
+                clearInterval(chunkInterval);
+                chunkInterval = null;
             }
             
             stopSpeechRecognition();
             updateUI('paused');
-            
-            // Save what we have
-            saveCurrentChunk();
         }
         
         function resumeRecording() {
@@ -626,9 +637,16 @@
             isPaused = false;
             recordingStartTime = Date.now();
             
-            if (mediaRecorder && mediaRecorder.state === 'paused') {
-                mediaRecorder.resume();
-            }
+            // Start fresh recorder for new valid chunk
+            currentChunks = [];
+            mediaRecorder = createRecorder();
+            mediaRecorder.start();
+            
+            chunkInterval = setInterval(() => {
+                if (isRecording && !isPaused && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }, CHUNK_DURATION_MS);
             
             updateUI('recording');
             startSpeechRecognition();
@@ -640,8 +658,13 @@
             isRecording = false;
             isPaused = false;
             
-            if (mediaRecorder) {
-                mediaRecorder.stop();
+            if (chunkInterval) {
+                clearInterval(chunkInterval);
+                chunkInterval = null;
+            }
+            
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop(); // will trigger onstop → save final chunk
             }
             
             if (audioStream) {

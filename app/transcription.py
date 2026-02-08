@@ -162,8 +162,23 @@ async def transcribe_pending_chunks():
         # Check if file exists
         if not os.path.exists(file_path):
             logger.warning(f"Audio file not found for chunk {chunk_id}: {file_path}")
-            # Mark as failed so we don't keep retrying
             await db.mark_chunk_failed(chunk_id, "File not found")
+            continue
+        
+        # Validate audio file before wasting CPU on transcription
+        try:
+            validation = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", file_path],
+                capture_output=True, text=True, timeout=10
+            )
+            if validation.returncode != 0:
+                error = validation.stderr.strip()[:200] if validation.stderr else "Invalid audio file"
+                logger.warning(f"Invalid audio file for chunk {chunk_id}: {error}")
+                await db.mark_chunk_failed(chunk_id, f"Invalid audio: {error}")
+                continue
+        except Exception as e:
+            logger.warning(f"Audio validation error for chunk {chunk_id}: {e}")
+            await db.mark_chunk_failed(chunk_id, f"Validation error: {e}")
             continue
         
         # Transcribe
@@ -171,7 +186,8 @@ async def transcribe_pending_chunks():
         
         if result.get('error'):
             logger.error(f"Failed to transcribe chunk {chunk_id}: {result['error']}")
-            # Don't mark as failed - we might want to retry later
+            # Mark as failed with retry count — stop after 3 attempts
+            await db.mark_chunk_failed(chunk_id, result['error'])
             continue
         
         if result['text']:
