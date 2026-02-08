@@ -2,894 +2,867 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2D5016">
     <title>Your Progress — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/static/icon-192.png">
+    
     <style>
-        * {
+        :root {
+            --color-primary: #2D5016;
+            --color-primary-light: #3D6B1E;
+            --color-background: #FFF8F0;
+            --color-white: #FFFFFF;
+            --color-text: #1A1A1A;
+            --color-text-light: #4A4A4A;
+            --color-cream: #FFF8F0;
+            --color-success: #059669;
+            --color-warning: #D97706;
+            --color-info: #2563EB;
+            --font-body: 20px;
+            --font-header: 28px;
+            --touch-min: 64px;
+            --spacing: 24px;
+            --radius: 16px;
+        }
+        
+        *, *::before, *::after {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
-
-        :root {
-            --forest-green: #2D5016;
-            --forest-light: #4A7C23;
-            --forest-dark: #1A3009;
-            --warm-cream: #FFF8F0;
-            --soft-cream: #FDF5EB;
-            --gold: #D4A847;
-            --gold-light: #E8C76A;
-            --text-dark: #2C2C2C;
-            --text-muted: #6B6B6B;
-            --success: #28a745;
-            --warning: #ffc107;
-            --danger: #dc3545;
-        }
-
+        
         body {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            background: var(--warm-cream);
-            color: var(--text-dark);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: var(--font-body);
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-background);
             min-height: 100vh;
-            padding-bottom: 100px;
         }
-
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, var(--forest-green) 0%, var(--forest-light) 100%);
-            color: white;
-            padding: 30px 20px;
-            text-align: center;
+        
+        /* Navigation */
+        .nav {
+            background: var(--color-primary);
+            padding: 16px var(--spacing);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 8px;
-            font-weight: normal;
-        }
-
-        .header .subtitle {
-            font-size: 16px;
-            opacity: 0.9;
-        }
-
-        .header .user-greeting {
-            margin-top: 15px;
-            font-size: 20px;
-        }
-
-        /* Main Container */
-        .container {
-            max-width: 600px;
+        
+        .nav-content {
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Overall Progress */
-        .overall-progress {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-
-        .overall-title {
-            font-size: 18px;
-            color: var(--text-muted);
-            margin-bottom: 15px;
-        }
-
-        .overall-percentage {
-            font-size: 64px;
-            font-weight: bold;
-            color: var(--forest-green);
-            line-height: 1;
-        }
-
-        .overall-percentage span {
-            font-size: 32px;
-        }
-
-        .overall-message {
-            margin-top: 15px;
-            font-size: 18px;
-            color: var(--text-dark);
-        }
-
-        .overall-bar {
-            height: 12px;
-            background: #e0e0e0;
-            border-radius: 6px;
-            margin-top: 20px;
-            overflow: hidden;
-        }
-
-        .overall-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--forest-green), var(--gold));
-            border-radius: 6px;
-            transition: width 1s ease-out;
-        }
-
-        /* Product Cards */
-        .product-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .product-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-
-        .product-card.ready {
-            border-left: 4px solid var(--success);
-        }
-
-        .product-card.in-progress {
-            border-left: 4px solid var(--gold);
-        }
-
-        .product-card.not-started {
-            border-left: 4px solid #e0e0e0;
-        }
-
-        .product-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 12px;
         }
-
-        .product-icon {
-            font-size: 32px;
-            margin-right: 12px;
-            width: 44px;
-            text-align: center;
-        }
-
-        .product-info {
-            flex: 1;
-        }
-
-        .product-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--text-dark);
-        }
-
-        .product-tier {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        .product-percentage {
+        
+        .nav-logo {
+            color: var(--color-white);
             font-size: 24px;
-            font-weight: bold;
-            color: var(--forest-green);
+            font-weight: 700;
+            text-decoration: none;
         }
-
-        /* Progress Bar */
-        .progress-bar {
-            height: 10px;
-            background: #e8e8e8;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-bottom: 10px;
+        
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
-
-        .progress-fill {
-            height: 100%;
-            border-radius: 5px;
-            transition: width 1s ease-out;
-        }
-
-        .progress-fill.green {
-            background: linear-gradient(90deg, var(--forest-green), var(--forest-light));
-        }
-
-        .progress-fill.gold {
-            background: linear-gradient(90deg, var(--gold), var(--gold-light));
-        }
-
-        .progress-fill.gray {
-            background: #ccc;
-        }
-
-        /* Status Message */
-        .status-message {
-            font-size: 15px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .next-step {
-            font-size: 14px;
-            color: var(--forest-green);
-            font-style: italic;
-            padding: 10px;
-            background: var(--soft-cream);
+        
+        .nav-link {
+            color: var(--color-white);
+            text-decoration: none;
+            padding: 8px 16px;
             border-radius: 8px;
-            margin-top: 10px;
-        }
-
-        .next-step strong {
-            color: var(--forest-dark);
-        }
-
-        /* Milestone Badge */
-        .milestone-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, var(--gold), var(--gold-light));
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Tips Section */
-        .tips-section {
-            background: var(--soft-cream);
-            border-radius: 12px;
-            padding: 15px;
-            margin-top: 10px;
-        }
-
-        .tips-section h4 {
-            font-size: 14px;
-            color: var(--forest-green);
-            margin-bottom: 8px;
-        }
-
-        .tips-section ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .tips-section li {
-            font-size: 14px;
-            color: var(--text-muted);
-            padding: 4px 0;
-            padding-left: 20px;
-            position: relative;
-        }
-
-        .tips-section li::before {
-            content: "💡";
-            position: absolute;
-            left: 0;
-            font-size: 12px;
-        }
-
-        /* Action Button */
-        .action-btn {
-            display: block;
-            width: 100%;
-            padding: 18px;
-            font-size: 18px;
-            font-family: inherit;
-            background: linear-gradient(135deg, var(--forest-green), var(--forest-light));
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            margin-top: 25px;
-            text-decoration: none;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(45, 80, 22, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
-        }
-
-        .secondary-btn {
-            display: block;
-            width: 100%;
-            padding: 15px;
             font-size: 16px;
-            font-family: inherit;
-            background: white;
-            color: var(--forest-green);
-            border: 2px solid var(--forest-green);
-            border-radius: 12px;
-            cursor: pointer;
-            margin-top: 10px;
-            text-decoration: none;
-            text-align: center;
             transition: background 0.2s;
         }
-
-        .secondary-btn:hover {
-            background: var(--soft-cream);
+        
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.2);
         }
-
-        /* Confetti Canvas */
-        #confetti-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1000;
+        
+        /* Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--spacing);
         }
-
-        /* Milestone Celebration */
-        .milestone-celebration {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+        
+        /* Header */
+        .page-header {
             text-align: center;
-            z-index: 1001;
-            animation: popIn 0.5s ease-out;
-            display: none;
+            margin-bottom: 40px;
         }
-
-        @keyframes popIn {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        
+        .page-header h1 {
+            font-size: 36px;
+            color: var(--color-primary);
+            margin-bottom: 8px;
         }
-
-        .celebration-icon {
-            font-size: 64px;
-            margin-bottom: 15px;
+        
+        .page-header p {
+            color: var(--color-text-light);
+            font-size: 18px;
         }
-
-        .celebration-title {
-            font-size: 24px;
-            color: var(--forest-green);
-            margin-bottom: 10px;
+        
+        /* Recording Stats */
+        .recording-stats {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-
-        .celebration-message {
-            font-size: 16px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-        }
-
-        /* Loading State */
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #e0e0e0;
-            border-top-color: var(--forest-green);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Requirements Checklist */
-        .requirements-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 12px;
-        }
-
-        .requirements-list li {
+        
+        .stats-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
-            font-size: 15px;
-            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 24px;
         }
-
-        .requirements-list li:last-child {
-            border-bottom: none;
+        
+        .stats-header h2 {
+            font-size: 24px;
+            color: var(--color-primary);
         }
-
-        .req-icon {
+        
+        .big-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        
+        .big-label {
+            font-size: 16px;
+            color: var(--color-text-light);
+        }
+        
+        /* Milestones */
+        .milestones {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+        
+        .milestone {
+            background: var(--color-cream);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            border: 2px solid transparent;
+        }
+        
+        .milestone.completed {
+            border-color: var(--color-success);
+            background: rgba(5, 150, 105, 0.1);
+        }
+        
+        .milestone.current {
+            border-color: var(--color-warning);
+            background: rgba(217, 119, 6, 0.1);
+        }
+        
+        .milestone-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .milestone-time {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+        
+        .milestone-label {
+            font-size: 14px;
+            color: var(--color-text-light);
+            margin-top: 4px;
+        }
+        
+        .milestone-check {
+            position: absolute;
+            top: -8px;
+            right: -8px;
             width: 24px;
             height: 24px;
-            margin-right: 10px;
+            background: var(--color-success);
+            color: white;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 14px;
+        }
+        
+        /* Product Cards */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .product-card {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .product-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .product-icon {
+            font-size: 40px;
+        }
+        
+        .product-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+        
+        .product-status {
+            font-size: 14px;
+            color: var(--color-text-light);
+        }
+        
+        /* Progress Bar */
+        .progress-bar {
+            height: 12px;
+            background: #E0D5C5;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-fill.success { background: var(--color-success); }
+        .progress-fill.warning { background: var(--color-warning); }
+        .progress-fill.info { background: var(--color-info); }
+        .progress-fill.primary { background: var(--color-primary); }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--color-text-light);
+        }
+        
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status-badge.ready { background: rgba(5, 150, 105, 0.2); color: #059669; }
+        .status-badge.processing { background: rgba(217, 119, 6, 0.2); color: #D97706; }
+        .status-badge.locked { background: rgba(107, 114, 128, 0.2); color: #6B7280; }
+        .status-badge.available { background: rgba(37, 99, 235, 0.2); color: #2563EB; }
+        
+        /* Action Button */
+        .action-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: var(--color-primary);
+            color: var(--color-white);
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            margin-top: 12px;
+        }
+        
+        .action-btn:hover {
+            background: var(--color-primary-light);
+        }
+        
+        .action-btn.secondary {
+            background: var(--color-text-light);
+        }
+        
+        .action-btn:disabled {
+            background: #D1D5DB;
+            cursor: not-allowed;
+        }
+        
+        /* Processing Status */
+        .processing-card {
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+            color: var(--color-white);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .processing-card h2 {
+            margin-bottom: 16px;
+        }
+        
+        .processing-stage {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 16px;
+        }
+        
+        .processing-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .processing-bar .fill {
+            height: 100%;
+            background: var(--color-white);
+            transition: width 0.3s;
+        }
+        
+        /* Encouragement */
+        .encouragement {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 24px;
+            text-align: center;
+            margin-top: 24px;
+            border: 2px dashed var(--color-primary);
+        }
+        
+        .encouragement h3 {
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+        
+        .encouragement p {
+            color: var(--color-text-light);
             font-size: 16px;
         }
-
-        .req-icon.done {
-            color: var(--success);
-        }
-
-        .req-icon.pending {
-            color: #ccc;
-        }
-
-        .req-text {
-            flex: 1;
-        }
-
-        .req-progress {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        /* Responsive */
-        @media (max-width: 400px) {
-            .product-header {
-                flex-wrap: wrap;
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+            .milestones {
+                grid-template-columns: repeat(2, 1fr);
             }
             
-            .product-percentage {
-                width: 100%;
-                text-align: right;
-                margin-top: 5px;
+            .products-grid {
+                grid-template-columns: 1fr;
             }
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <canvas id="confetti-canvas"></canvas>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-logo">🌿 InstaBio</a>
+            <div class="nav-links">
+                <a href="/record" class="nav-link">Record</a>
+                <a href="/vault" class="nav-link">Vault</a>
+                <a href="/biography" class="nav-link">Biography</a>
+                <a href="/journal" class="nav-link">Journal</a>
+                <a href="/progress" class="nav-link active">Progress</a>
+            </div>
+        </div>
+    </nav>
     
-    <div class="header">
-        <h1>📖 Your Legacy Progress</h1>
-        <p class="subtitle">Watch your story come to life</p>
-        <p class="user-greeting" id="greeting">Loading...</p>
-    </div>
-
-    <div class="container" id="content">
-        <div class="loading">
-            <div class="loading-spinner"></div>
-            <p>Loading your progress...</p>
+    <div class="container">
+        <!-- Header -->
+        <header class="page-header">
+            <h1>📊 Your Progress</h1>
+            <p>Watch your legacy grow</p>
+        </header>
+        
+        <!-- Processing Status (shown when processing) -->
+        <div class="processing-card hidden" id="processing-status">
+            <div class="spinner"></div>
+            <h2>✨ Creating Your Legacy</h2>
+            <p class="processing-stage" id="processing-stage">Analyzing your stories...</p>
+            <div class="processing-bar">
+                <div class="fill" id="processing-fill" style="width: 0%"></div>
+            </div>
+            <p id="processing-percent">0%</p>
+        </div>
+        
+        <!-- Recording Stats -->
+        <div class="recording-stats">
+            <div class="stats-header">
+                <h2>🎙️ Recording Time</h2>
+                <div style="text-align: right;">
+                    <div class="big-number" id="total-time">0:00</div>
+                    <div class="big-label">hours recorded</div>
+                </div>
+            </div>
+            
+            <div class="milestones">
+                <div class="milestone" id="milestone-1h">
+                    <div class="milestone-icon">📖</div>
+                    <div class="milestone-time">1 hour</div>
+                    <div class="milestone-label">Sample chapter</div>
+                </div>
+                <div class="milestone" id="milestone-5h">
+                    <div class="milestone-icon">📚</div>
+                    <div class="milestone-time">5 hours</div>
+                    <div class="milestone-label">Full biography</div>
+                </div>
+                <div class="milestone" id="milestone-10h">
+                    <div class="milestone-icon">🎙️</div>
+                    <div class="milestone-time">10 hours</div>
+                    <div class="milestone-label">Quality voice clone</div>
+                </div>
+                <div class="milestone" id="milestone-20h">
+                    <div class="milestone-icon">👤</div>
+                    <div class="milestone-time">20 hours</div>
+                    <div class="milestone-label">Premium avatar</div>
+                </div>
+                <div class="milestone" id="milestone-50h">
+                    <div class="milestone-icon">🕊️</div>
+                    <div class="milestone-time">50 hours</div>
+                    <div class="milestone-label">Complete Soul</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="products-grid">
+            <!-- Biography -->
+            <div class="product-card">
+                <div class="product-header">
+                    <span class="product-icon">📖</span>
+                    <div>
+                        <div class="product-title">Biography</div>
+                        <div class="product-status" id="bio-status-text">Not started</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill primary" id="bio-progress" style="width: 0%"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="bio-chapters">0 chapters</span>
+                    <span class="status-badge locked" id="bio-badge">Locked</span>
+                </div>
+                <a href="/biography" class="action-btn" id="bio-btn">View Biography</a>
+            </div>
+            
+            <!-- Journal -->
+            <div class="product-card">
+                <div class="product-header">
+                    <span class="product-icon">📔</span>
+                    <div>
+                        <div class="product-title">Life Journal</div>
+                        <div class="product-status" id="journal-status-text">Not started</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill info" id="journal-progress" style="width: 0%"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="journal-entries">0 entries</span>
+                    <span class="status-badge locked" id="journal-badge">Locked</span>
+                </div>
+                <a href="/journal" class="action-btn secondary" id="journal-btn">View Journal</a>
+            </div>
+            
+            <!-- Voice Clone -->
+            <div class="product-card">
+                <div class="product-header">
+                    <span class="product-icon">🎙️</span>
+                    <div>
+                        <div class="product-title">Voice Clone</div>
+                        <div class="product-status" id="voice-status-text">Need 2+ hours</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill warning" id="voice-progress" style="width: 0%"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="voice-quality">Basic tier</span>
+                    <span class="status-badge locked" id="voice-badge">Locked</span>
+                </div>
+                <button class="action-btn secondary" disabled>Coming Soon</button>
+            </div>
+            
+            <!-- Avatar -->
+            <div class="product-card">
+                <div class="product-header">
+                    <span class="product-icon">👤</span>
+                    <div>
+                        <div class="product-title">Avatar</div>
+                        <div class="product-status" id="avatar-status-text">Need 10+ hours</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill success" id="avatar-progress" style="width: 0%"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="avatar-tier">Not available</span>
+                    <span class="status-badge locked" id="avatar-badge">Locked</span>
+                </div>
+                <button class="action-btn secondary" disabled>Coming Soon</button>
+            </div>
+            
+            <!-- Soul -->
+            <div class="product-card">
+                <div class="product-header">
+                    <span class="product-icon">🕊️</span>
+                    <div>
+                        <div class="product-title">The Soul</div>
+                        <div class="product-status" id="soul-status-text">Need 20+ hours</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill primary" id="soul-progress" style="width: 0%"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="soul-status">Not ready</span>
+                    <span class="status-badge locked" id="soul-badge">Locked</span>
+                </div>
+                <button class="action-btn secondary" disabled>Coming Soon</button>
+            </div>
+        </div>
+        
+        <!-- Process Button -->
+        <div style="text-align: center; margin: 32px 0;">
+            <button class="action-btn" id="process-btn" onclick="startProcessing()" style="max-width: 300px;">
+                ✨ Process My Stories
+            </button>
+            <p style="margin-top: 12px; color: var(--color-text-light); font-size: 14px;" id="process-hint">
+                Generate your biography and journal from recordings
+            </p>
+        </div>
+        
+        <!-- Encouragement -->
+        <div class="encouragement" id="encouragement">
+            <h3>💪 Keep Going!</h3>
+            <p id="encouragement-text">Every story you share brings your legacy closer to completion.</p>
         </div>
     </div>
-
-    <!-- Milestone Celebration Modal -->
-    <div class="milestone-celebration" id="celebration">
-        <div class="celebration-icon">🎉</div>
-        <h2 class="celebration-title" id="celebration-title">Milestone Reached!</h2>
-        <p class="celebration-message" id="celebration-message">You've made amazing progress!</p>
-        <button class="action-btn" onclick="closeCelebration()">Continue</button>
-    </div>
-
+    
     <script>
-        const API_BASE = '';
-        let token = localStorage.getItem('instabio_token');
-        let productsData = null;
-        let previousProgress = null;
-
-        // Check authentication
+        const API_URL = '/api';
+        const token = localStorage.getItem('instabio_token');
+        
         if (!token) {
             window.location.href = '/onboard';
         }
-
-        // Load progress data
+        
+        let totalSeconds = 0;
+        let processingInterval = null;
+        
         async function loadProgress() {
             try {
-                const response = await fetch(`${API_BASE}/api/products/status`, {
+                // Load user stats
+                const statsRes = await fetch(`${API_URL}/user/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await statsRes.json();
+                
+                if (stats.success) {
+                    totalSeconds = stats.total_duration_seconds || 0;
+                    updateRecordingStats(stats);
+                }
+                
+                // Load processing status
+                const progressRes = await fetch(`${API_URL}/progress`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const progress = await progressRes.json();
+                
+                updateProcessingStatus(progress);
+                
+                // Load biography status
+                const bioRes = await fetch(`${API_URL}/biography`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const bio = await bioRes.json();
+                
+                updateBiographyStatus(bio);
+                
+                // Load journal status
+                const journalRes = await fetch(`${API_URL}/journal`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const journal = await journalRes.json();
+                
+                updateJournalStatus(journal);
+                
+            } catch (err) {
+                console.error('Failed to load progress:', err);
+            }
+        }
+        
+        function updateRecordingStats(stats) {
+            const hours = stats.total_duration_seconds / 3600;
+            document.getElementById('total-time').textContent = formatHours(hours);
+            
+            // Update milestones
+            const milestones = [
+                { id: 'milestone-1h', hours: 1 },
+                { id: 'milestone-5h', hours: 5 },
+                { id: 'milestone-10h', hours: 10 },
+                { id: 'milestone-20h', hours: 20 },
+                { id: 'milestone-50h', hours: 50 }
+            ];
+            
+            let currentMilestone = null;
+            
+            milestones.forEach(m => {
+                const el = document.getElementById(m.id);
+                if (hours >= m.hours) {
+                    el.classList.add('completed');
+                    el.innerHTML += '<div class="milestone-check">✓</div>';
+                } else if (!currentMilestone) {
+                    el.classList.add('current');
+                    currentMilestone = m;
+                }
+            });
+            
+            // Update product progress based on recording hours
+            updateProductProgress(hours);
+            
+            // Update encouragement
+            updateEncouragement(hours);
+        }
+        
+        function updateProductProgress(hours) {
+            // Voice clone progress (needs 2h for basic, 10h for good, 20h for premium)
+            const voiceProgress = Math.min((hours / 20) * 100, 100);
+            document.getElementById('voice-progress').style.width = `${voiceProgress}%`;
+            
+            if (hours >= 20) {
+                document.getElementById('voice-quality').textContent = 'Premium tier';
+                document.getElementById('voice-badge').className = 'status-badge ready';
+                document.getElementById('voice-badge').textContent = 'Ready';
+                document.getElementById('voice-status-text').textContent = 'Premium quality available!';
+            } else if (hours >= 10) {
+                document.getElementById('voice-quality').textContent = 'Good tier';
+                document.getElementById('voice-badge').className = 'status-badge available';
+                document.getElementById('voice-badge').textContent = 'Available';
+                document.getElementById('voice-status-text').textContent = `${Math.round(20 - hours)}h more for premium`;
+            } else if (hours >= 2) {
+                document.getElementById('voice-quality').textContent = 'Basic tier';
+                document.getElementById('voice-badge').className = 'status-badge available';
+                document.getElementById('voice-badge').textContent = 'Available';
+                document.getElementById('voice-status-text').textContent = `${Math.round(10 - hours)}h more for good`;
+            } else {
+                document.getElementById('voice-status-text').textContent = `${Math.round(2 - hours)}h more needed`;
+            }
+            
+            // Avatar progress
+            const avatarProgress = Math.min((hours / 20) * 100, 100);
+            document.getElementById('avatar-progress').style.width = `${avatarProgress}%`;
+            
+            if (hours >= 20) {
+                document.getElementById('avatar-tier').textContent = 'High-fidelity';
+                document.getElementById('avatar-badge').className = 'status-badge ready';
+                document.getElementById('avatar-badge').textContent = 'Ready';
+                document.getElementById('avatar-status-text').textContent = 'Premium avatar available!';
+            } else if (hours >= 10) {
+                document.getElementById('avatar-tier').textContent = 'Dynamic';
+                document.getElementById('avatar-badge').className = 'status-badge available';
+                document.getElementById('avatar-badge').textContent = 'Available';
+                document.getElementById('avatar-status-text').textContent = `${Math.round(20 - hours)}h more for premium`;
+            } else {
+                document.getElementById('avatar-status-text').textContent = `${Math.round(10 - hours)}h more needed`;
+            }
+            
+            // Soul progress
+            const soulProgress = Math.min((hours / 50) * 100, 100);
+            document.getElementById('soul-progress').style.width = `${soulProgress}%`;
+            
+            if (hours >= 50) {
+                document.getElementById('soul-status').textContent = 'Complete';
+                document.getElementById('soul-badge').className = 'status-badge ready';
+                document.getElementById('soul-badge').textContent = 'Ready';
+                document.getElementById('soul-status-text').textContent = 'Your Soul is ready!';
+            } else if (hours >= 20) {
+                document.getElementById('soul-status').textContent = 'Growing';
+                document.getElementById('soul-badge').className = 'status-badge processing';
+                document.getElementById('soul-badge').textContent = 'Growing';
+                document.getElementById('soul-status-text').textContent = `${Math.round(50 - hours)}h more for complete`;
+            } else {
+                document.getElementById('soul-status-text').textContent = `${Math.round(20 - hours)}h more needed`;
+            }
+        }
+        
+        function updateProcessingStatus(progress) {
+            const processingCard = document.getElementById('processing-status');
+            const processBtn = document.getElementById('process-btn');
+            const processHint = document.getElementById('process-hint');
+            
+            if (progress.status === 'processing') {
+                processingCard.classList.remove('hidden');
+                processBtn.disabled = true;
+                processBtn.textContent = 'Processing...';
+                
+                document.getElementById('processing-stage').textContent = 
+                    formatStage(progress.stage);
+                document.getElementById('processing-fill').style.width = 
+                    `${progress.progress || 0}%`;
+                document.getElementById('processing-percent').textContent = 
+                    `${progress.progress || 0}%`;
+                
+                // Poll for updates
+                if (!processingInterval) {
+                    processingInterval = setInterval(loadProgress, 3000);
+                }
+            } else {
+                processingCard.classList.add('hidden');
+                processBtn.disabled = false;
+                processBtn.textContent = '✨ Process My Stories';
+                
+                if (processingInterval) {
+                    clearInterval(processingInterval);
+                    processingInterval = null;
+                }
+                
+                if (progress.status === 'complete') {
+                    processHint.textContent = 'Last processed: ' + 
+                        new Date(progress.completed_at).toLocaleDateString();
+                }
+            }
+        }
+        
+        function updateBiographyStatus(data) {
+            if (data.success && data.biography) {
+                const chapters = data.biography.chapters || [];
+                document.getElementById('bio-chapters').textContent = 
+                    `${chapters.length} chapters`;
+                document.getElementById('bio-progress').style.width = '100%';
+                document.getElementById('bio-badge').className = 'status-badge ready';
+                document.getElementById('bio-badge').textContent = 'Ready';
+                document.getElementById('bio-status-text').textContent = 'Your story is ready!';
+            } else if (data.status === 'processing') {
+                document.getElementById('bio-progress').style.width = 
+                    `${data.progress || 0}%`;
+                document.getElementById('bio-badge').className = 'status-badge processing';
+                document.getElementById('bio-badge').textContent = 'Processing';
+                document.getElementById('bio-status-text').textContent = 'Creating your story...';
+            }
+        }
+        
+        function updateJournalStatus(data) {
+            if (data.success && data.journal && data.journal.entries) {
+                const entries = data.journal.entries.length;
+                document.getElementById('journal-entries').textContent = 
+                    `${entries} entries`;
+                document.getElementById('journal-progress').style.width = '100%';
+                document.getElementById('journal-badge').className = 'status-badge ready';
+                document.getElementById('journal-badge').textContent = 'Ready';
+                document.getElementById('journal-status-text').textContent = 'Your journal is ready!';
+            }
+        }
+        
+        function updateEncouragement(hours) {
+            const messages = [
+                { min: 0, msg: "Start recording to build your legacy!" },
+                { min: 0.5, msg: "Great start! Keep those memories flowing." },
+                { min: 1, msg: "One hour down! Your sample chapter is unlocked." },
+                { min: 2, msg: "Your voice is becoming familiar to us." },
+                { min: 5, msg: "Amazing progress! Your full biography awaits." },
+                { min: 10, msg: "Your voice clone is getting really good now!" },
+                { min: 20, msg: "You're building something truly special." },
+                { min: 50, msg: "You've created a complete legacy. Incredible!" }
+            ];
+            
+            let message = messages[0].msg;
+            for (const m of messages) {
+                if (hours >= m.min) message = m.msg;
+            }
+            
+            document.getElementById('encouragement-text').textContent = message;
+        }
+        
+        function formatHours(hours) {
+            if (hours < 1) {
+                return `${Math.round(hours * 60)}m`;
+            }
+            return `${hours.toFixed(1)}h`;
+        }
+        
+        function formatStage(stage) {
+            const stages = {
+                'starting': '🚀 Starting up...',
+                'fetching_transcripts': '📝 Reading your words...',
+                'extracting_entities': '🔍 Finding people, places, and events...',
+                'building_timeline': '📅 Building your timeline...',
+                'generating_biography': '✍️ Writing your story...',
+                'generating_journal': '📔 Creating journal entries...',
+                'complete': '✅ All done!'
+            };
+            return stages[stage] || stage;
+        }
+        
+        async function startProcessing() {
+            try {
+                const btn = document.getElementById('process-btn');
+                btn.disabled = true;
+                btn.textContent = 'Starting...';
+                
+                const response = await fetch(`${API_URL}/process`, {
+                    method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        window.location.href = '/onboard';
-                        return;
-                    }
-                    throw new Error('Failed to load progress');
-                }
+                const data = await response.json();
                 
-                productsData = await response.json();
-                renderProgress();
-                checkForMilestones();
-                
-            } catch (error) {
-                console.error('Error loading progress:', error);
-                document.getElementById('content').innerHTML = `
-                    <div class="loading">
-                        <p>Unable to load your progress. Please try again.</p>
-                        <a href="/record" class="action-btn">Go to Recording</a>
-                    </div>
-                `;
-            }
-        }
-
-        function renderProgress() {
-            const data = productsData;
-            
-            // Update greeting
-            document.getElementById('greeting').textContent = 
-                `Welcome back, ${data.user.first_name}!`;
-            
-            // Calculate overall progress (weighted average)
-            const overallPct = calculateOverallProgress(data);
-            const overallMessage = getOverallMessage(overallPct);
-            
-            let html = `
-                <!-- Overall Progress -->
-                <div class="overall-progress">
-                    <p class="overall-title">Your Legacy Completion</p>
-                    <p class="overall-percentage">${overallPct}<span>%</span></p>
-                    <div class="overall-bar">
-                        <div class="overall-bar-fill" style="width: ${overallPct}%"></div>
-                    </div>
-                    <p class="overall-message">${overallMessage}</p>
-                </div>
-                
-                <!-- Recording -->
-                ${renderProductCard({
-                    icon: '🎙️',
-                    name: 'Recording',
-                    tier: `${data.recording.hours.toFixed(1)} hours • ${data.recording.sessions} sessions`,
-                    percentage: Math.min(100, Math.round((data.recording.hours / 10) * 100)),
-                    status: data.recording.hours >= 10 ? 'ready' : (data.recording.hours > 0 ? 'in-progress' : 'not-started'),
-                    message: getRecordingMessage(data.recording.hours),
-                    nextStep: data.recording.hours < 10 ? 
-                        `<strong>${(10 - data.recording.hours).toFixed(1)} more hours</strong> until you unlock the full Soul experience!` :
-                        'Amazing! You have plenty of content for your legacy.',
-                    isReady: data.recording.hours >= 10
-                })}
-                
-                <!-- Biography -->
-                ${renderProductCard({
-                    icon: '📖',
-                    name: 'Biography',
-                    tier: getBiographyTier(data.biography),
-                    percentage: Math.round((data.biography.chapters_ready / data.biography.chapters_total) * 100),
-                    status: data.biography.status === 'ready' ? 'ready' : (data.biography.status === 'processing' ? 'in-progress' : 'not-started'),
-                    message: `${data.biography.chapters_ready} of ${data.biography.chapters_total} chapters`,
-                    nextStep: getBiographyNextStep(data.biography, data.recording.hours),
-                    isReady: data.biography.status === 'ready'
-                })}
-                
-                <!-- Journal -->
-                ${renderProductCard({
-                    icon: '📅',
-                    name: 'Life Journal',
-                    tier: data.journal.entries > 0 ? `${data.journal.entries} entries` : 'Not started',
-                    percentage: data.journal.entries > 0 ? Math.min(100, data.journal.entries * 2) : 0,
-                    status: data.journal.entries > 0 ? 'ready' : 'not-started',
-                    message: data.journal.entries > 0 ? 
-                        `Your journal is growing with every recording!` :
-                        'Start recording to build your journal',
-                    nextStep: 'Each recording automatically adds to your life journal.',
-                    isReady: data.journal.entries > 0
-                })}
-                
-                <!-- Voice Clone -->
-                ${renderProductCard({
-                    icon: '🎙️',
-                    name: 'Voice Clone',
-                    tier: data.voice_clone.tier_name,
-                    percentage: data.voice_clone.quality_pct,
-                    status: data.voice_clone.is_ready ? 'ready' : (data.recording.hours > 0 ? 'in-progress' : 'not-started'),
-                    message: getVoiceCloneMessage(data.voice_clone, data.recording.hours),
-                    nextStep: data.voice_clone.hours_to_next_tier ? 
-                        `<strong>${data.voice_clone.hours_to_next_tier} more hours</strong> to reach the next tier!` :
-                        'Your voice clone is at maximum quality!',
-                    isReady: data.voice_clone.is_ready,
-                    showMilestone: data.voice_clone.tier >= 2
-                })}
-                
-                <!-- Avatar -->
-                ${renderProductCard({
-                    icon: '👤',
-                    name: 'Avatar',
-                    tier: data.avatar.tier_name,
-                    percentage: data.avatar.quality_pct,
-                    status: data.avatar.is_ready ? 'ready' : 'not-started',
-                    message: `${data.avatar.photos} photo(s) uploaded`,
-                    nextStep: data.avatar.is_ready ? 
-                        'Upload more photos for better angle coverage!' :
-                        '<strong>Upload a photo</strong> to create your avatar!',
-                    isReady: data.avatar.is_ready,
-                    showPhotoUpload: true
-                })}
-                
-                <!-- Soul -->
-                ${renderSoulCard(data.soul)}
-                
-                <!-- Action Buttons -->
-                <a href="/record" class="action-btn">🎙️ Continue Recording</a>
-                <a href="/vault" class="secondary-btn">📚 View Your Vault</a>
-            `;
-            
-            document.getElementById('content').innerHTML = html;
-            
-            // Animate progress bars
-            setTimeout(() => {
-                document.querySelectorAll('.progress-fill, .overall-bar-fill').forEach(bar => {
-                    bar.style.width = bar.getAttribute('style').match(/width:\s*(\d+%)/)[1];
-                });
-            }, 100);
-        }
-
-        function renderProductCard({ icon, name, tier, percentage, status, message, nextStep, isReady, showMilestone, showPhotoUpload }) {
-            const statusClass = isReady ? 'ready' : (percentage > 0 ? 'in-progress' : 'not-started');
-            const progressClass = isReady ? 'green' : (percentage > 0 ? 'gold' : 'gray');
-            
-            return `
-                <div class="product-card ${statusClass}">
-                    <div class="product-header">
-                        <div class="product-icon">${icon}</div>
-                        <div class="product-info">
-                            <div class="product-name">
-                                ${name}
-                                ${showMilestone ? '<span class="milestone-badge">Premium</span>' : ''}
-                            </div>
-                            <div class="product-tier">${tier}</div>
-                        </div>
-                        <div class="product-percentage">${percentage}%</div>
-                    </div>
-                    
-                    <div class="progress-bar">
-                        <div class="progress-fill ${progressClass}" style="width: 0%; transition: width 1s ease-out;" 
-                             data-width="${percentage}%"></div>
-                    </div>
-                    
-                    <p class="status-message">${message}</p>
-                    
-                    ${nextStep ? `<div class="next-step">👉 ${nextStep}</div>` : ''}
-                    
-                    ${showPhotoUpload && !isReady ? `
-                        <button class="secondary-btn" onclick="uploadPhoto()" style="margin-top: 15px;">
-                            📷 Upload a Photo
-                        </button>
-                    ` : ''}
-                </div>
-            `;
-        }
-
-        function renderSoulCard(soul) {
-            return `
-                <div class="product-card ${soul.is_ready ? 'ready' : 'in-progress'}">
-                    <div class="product-header">
-                        <div class="product-icon">🕊️</div>
-                        <div class="product-info">
-                            <div class="product-name">
-                                The Soul
-                                ${soul.is_ready ? '<span class="milestone-badge">Active</span>' : ''}
-                            </div>
-                            <div class="product-tier">${soul.tier} — ${soul.tier_description}</div>
-                        </div>
-                        <div class="product-percentage">${soul.readiness_pct}%</div>
-                    </div>
-                    
-                    <div class="progress-bar">
-                        <div class="progress-fill ${soul.is_ready ? 'green' : 'gold'}" 
-                             style="width: 0%;" data-width="${soul.readiness_pct}%"></div>
-                    </div>
-                    
-                    <p class="status-message">${soul.encouraging_message}</p>
-                    
-                    <ul class="requirements-list">
-                        ${soul.requirements_met.includes('recording_complete') ? 
-                            `<li><span class="req-icon done">✓</span><span class="req-text">10+ hours recorded</span></li>` :
-                            (soul.requirements_met.includes('recording_started') ?
-                                `<li><span class="req-icon pending">○</span><span class="req-text">10+ hours recorded</span><span class="req-progress">In progress</span></li>` :
-                                `<li><span class="req-icon pending">○</span><span class="req-text">10+ hours recorded</span></li>`
-                            )
-                        }
-                        ${soul.requirements_met.includes('biography_ready') ? 
-                            `<li><span class="req-icon done">✓</span><span class="req-text">Biography generated</span></li>` :
-                            (soul.requirements_met.includes('biography_started') ?
-                                `<li><span class="req-icon pending">○</span><span class="req-text">Biography generated</span><span class="req-progress">Processing</span></li>` :
-                                `<li><span class="req-icon pending">○</span><span class="req-text">Biography generated</span></li>`
-                            )
-                        }
-                        ${soul.requirements_met.includes('voice_ready') ? 
-                            `<li><span class="req-icon done">✓</span><span class="req-text">Voice clone ready</span></li>` :
-                            `<li><span class="req-icon pending">○</span><span class="req-text">Voice clone ready</span></li>`
-                        }
-                        ${soul.requirements_met.includes('avatar_ready') ? 
-                            `<li><span class="req-icon done">✓</span><span class="req-text">Avatar ready (optional)</span></li>` :
-                            `<li><span class="req-icon pending">○</span><span class="req-text">Avatar ready (optional)</span></li>`
-                        }
-                    </ul>
-                    
-                    <div class="next-step">👉 ${soul.next_step}</div>
-                </div>
-            `;
-        }
-
-        function calculateOverallProgress(data) {
-            // Weighted: Recording 30%, Biography 25%, Voice 20%, Avatar 10%, Soul 15%
-            const recording = Math.min(100, (data.recording.hours / 10) * 100);
-            const biography = (data.biography.chapters_ready / data.biography.chapters_total) * 100;
-            const voice = data.voice_clone.quality_pct;
-            const avatar = data.avatar.quality_pct;
-            const soul = data.soul.readiness_pct;
-            
-            return Math.round(
-                recording * 0.30 +
-                biography * 0.25 +
-                voice * 0.20 +
-                avatar * 0.10 +
-                soul * 0.15
-            );
-        }
-
-        function getOverallMessage(pct) {
-            if (pct >= 90) return "🌟 Your legacy is nearly complete! What an incredible journey.";
-            if (pct >= 75) return "🎉 Amazing progress! You're building something that will last forever.";
-            if (pct >= 50) return "✨ You're halfway there! Keep sharing your stories.";
-            if (pct >= 25) return "🌱 Great start! Every story you tell adds to your legacy.";
-            return "🌱 Your legacy journey begins! Just tap and talk.";
-        }
-
-        function getRecordingMessage(hours) {
-            if (hours >= 50) return "Legendary! 50+ hours of precious memories.";
-            if (hours >= 20) return "Incredible! Your voice clone will be remarkably accurate.";
-            if (hours >= 10) return "Wonderful! You have enough for a full Soul experience.";
-            if (hours >= 5) return "Great progress! Your stories are building up.";
-            if (hours >= 1) return "Good start! Keep the stories coming.";
-            return "Begin your story by recording some memories!";
-        }
-
-        function getBiographyTier(biography) {
-            if (biography.status === 'ready') return 'Complete';
-            if (biography.status === 'processing') return 'In Progress';
-            return 'Not started';
-        }
-
-        function getBiographyNextStep(biography, hours) {
-            if (biography.status === 'ready') return 'Your biography is complete! Family can read your life story.';
-            if (biography.status === 'processing') return 'We\'re crafting your chapters. Check back soon!';
-            if (hours >= 2) return 'Recording enough content to start generating chapters.';
-            return `Record ${(2 - hours).toFixed(1)} more hours to start generating your biography.`;
-        }
-
-        function getVoiceCloneMessage(voice, hours) {
-            if (voice.tier >= 3) return "Premium quality! Your voice captures emotion and personality.";
-            if (voice.tier >= 2) return "Great quality! Your accent and speaking style are captured.";
-            if (voice.tier >= 1) return "Your voice is recognizable! More recording = more natural.";
-            if (hours > 0) return `${(1 - hours).toFixed(1)} more hours until your first voice clone.`;
-            return "Start recording to build your voice clone!";
-        }
-
-        // Photo upload
-        async function uploadPhoto() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/jpeg,image/png,image/webp,image/heic';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                const formData = new FormData();
-                formData.append('photo', file);
-                
-                try {
-                    const response = await fetch(`${API_BASE}/api/photo/upload`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` },
-                        body: formData
-                    });
-                    
-                    if (response.ok) {
-                        loadProgress(); // Reload to show new photo count
-                        showCelebration('📸 Photo Uploaded!', 'Your avatar is getting better!');
-                    } else {
-                        alert('Failed to upload photo. Please try again.');
-                    }
-                } catch (error) {
-                    alert('Error uploading photo: ' + error.message);
-                }
-            };
-            input.click();
-        }
-
-        // Milestone celebrations
-        function checkForMilestones() {
-            const stored = localStorage.getItem('instabio_progress');
-            previousProgress = stored ? JSON.parse(stored) : null;
-            
-            if (previousProgress && productsData) {
-                // Check for tier upgrades
-                if (productsData.voice_clone.tier > (previousProgress.voice_clone?.tier || 0)) {
-                    showCelebration('🎙️ Voice Clone Upgraded!', 
-                        `You've reached ${productsData.voice_clone.tier_name}!`);
-                }
-                
-                if (productsData.soul.is_ready && !previousProgress.soul?.is_ready) {
-                    showCelebration('🕊️ Soul Awakened!', 
-                        'Your interactive AI is ready! Family can now have conversations with you.');
-                    triggerConfetti();
-                }
-            }
-            
-            // Store current progress
-            localStorage.setItem('instabio_progress', JSON.stringify({
-                voice_clone: { tier: productsData.voice_clone.tier },
-                soul: { is_ready: productsData.soul.is_ready }
-            }));
-        }
-
-        function showCelebration(title, message) {
-            document.getElementById('celebration-title').textContent = title;
-            document.getElementById('celebration-message').textContent = message;
-            document.getElementById('celebration').style.display = 'block';
-            triggerConfetti();
-        }
-
-        function closeCelebration() {
-            document.getElementById('celebration').style.display = 'none';
-        }
-
-        // Confetti animation
-        function triggerConfetti() {
-            const canvas = document.getElementById('confetti-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            
-            const particles = [];
-            const colors = ['#2D5016', '#D4A847', '#4A7C23', '#E8C76A', '#ffffff'];
-            
-            for (let i = 0; i < 150; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: -20 - Math.random() * 100,
-                    size: Math.random() * 8 + 4,
-                    color: colors[Math.floor(Math.random() * colors.length)],
-                    vx: (Math.random() - 0.5) * 4,
-                    vy: Math.random() * 3 + 2,
-                    rotation: Math.random() * 360,
-                    rotationSpeed: (Math.random() - 0.5) * 10
-                });
-            }
-            
-            let frame = 0;
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                particles.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.rotation += p.rotationSpeed;
-                    p.vy += 0.1; // Gravity
-                    
-                    ctx.save();
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(p.rotation * Math.PI / 180);
-                    ctx.fillStyle = p.color;
-                    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-                    ctx.restore();
-                });
-                
-                frame++;
-                if (frame < 200) {
-                    requestAnimationFrame(animate);
+                if (data.success) {
+                    loadProgress();
                 } else {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    alert(data.message || 'Failed to start processing');
+                    btn.disabled = false;
+                    btn.textContent = '✨ Process My Stories';
                 }
+                
+            } catch (err) {
+                console.error('Failed to start processing:', err);
+                alert('Failed to start processing. Please try again.');
             }
-            
-            animate();
         }
-
-        // Initial load
-        loadProgress();
         
-        // Refresh every 30 seconds
-        setInterval(loadProgress, 30000);
+        // Initialize
+        loadProgress();
     </script>
 </body>
 </html>

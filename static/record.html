@@ -97,6 +97,25 @@
             font-size: 24px;
             font-weight: 700;
             color: var(--color-primary);
+            text-decoration: none;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .nav-link {
+            color: var(--color-primary);
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: rgba(45, 80, 22, 0.1);
         }
         
         .nav-link {
@@ -325,8 +344,12 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="logo">🌿 InstaBio</div>
-            <a href="/vault" class="nav-link">My Vault →</a>
+            <a href="/" class="logo">🌿 InstaBio</a>
+            <div class="nav-links">
+                <a href="/vault" class="nav-link">Vault</a>
+                <a href="/biography" class="nav-link">Bio</a>
+                <a href="/progress" class="nav-link">Progress</a>
+            </div>
         </div>
         
         <!-- Status Bar -->
