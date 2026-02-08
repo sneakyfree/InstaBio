@@ -1,0 +1,46 @@
+# InstaBio - Docker Compose Configuration
+# Your story. Forever.
+
+version: '3.8'
+
+services:
+  instabio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: instabio
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persistent data storage
+      - ./data:/app/data
+      # Mount host's Whisper for transcription (optional)
+      - /opt/whisper-stt:/opt/whisper-stt:ro
+    environment:
+      - INSTABIO_ENV=production
+      - WHISPER_PATH=/opt/whisper-stt/transcribe.sh
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# For development with hot reload:
+#   instabio-dev:
+#     build: .
+#     container_name: instabio-dev
+#     ports:
+#       - "8000:8000"
+#     volumes:
+#       - ./app:/app/app
+#       - ./static:/app/static
+#       - ./data:/app/data
+#       - /opt/whisper-stt:/opt/whisper-stt:ro
+#     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

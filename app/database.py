@@ -266,3 +266,12 @@ async def get_session_by_uuid(session_uuid: str) -> dict | None:
         )
         row = await cursor.fetchone()
         return dict(row) if row else None
+
+async def mark_chunk_failed(chunk_id: int, error_msg: str) -> None:
+    """Mark a chunk as failed transcription."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE audio_chunks SET transcription_status = 'failed' WHERE id = ?",
+            (chunk_id,)
+        )
+        await db.commit()
