@@ -8,13 +8,14 @@ Separate from avatar.py (which handles photo upload/status tracking).
 
 import asyncio
 import json
+import os
 import httpx
 from typing import Optional, List, Dict
 from pathlib import Path
 
-VERON_AVATAR_API = "http://24.11.183.106:8100"
-VERON_OLLAMA_API = "http://24.11.183.106:11434"
-VERON_TTS_API = "http://24.11.183.106:8100"  # TTS endpoint on same service
+VERON_AVATAR_API = os.environ.get("VERON_AVATAR_API", "http://24.11.183.106:8100")
+VERON_OLLAMA_API = os.environ.get("VERON_OLLAMA_API", "http://24.11.183.106:11434")
+VERON_TTS_API = os.environ.get("VERON_TTS_API", "http://24.11.183.106:8100")
 
 # Default interviewer portrait
 DEFAULT_PORTRAIT = "default"

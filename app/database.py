@@ -8,8 +8,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-# Database path
-DB_PATH = Path(__file__).parent.parent / "data" / "instabio.db"
+# Database path — configurable via env for test isolation
+DB_PATH = Path(os.environ.get("DATABASE_PATH", str(Path(__file__).parent.parent / "data" / "instabio.db")))
 
 async def get_db():
     """Get database connection."""
@@ -31,6 +31,7 @@ async def init_db():
                 birth_year INTEGER NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 session_token TEXT UNIQUE,
+                token_created_at TEXT DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -101,6 +102,39 @@ async def init_db():
             ON transcripts(session_id)
         """)
         
+        # Safe migration — add token_created_at if missing (for existing DBs)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN token_created_at TEXT DEFAULT ''")
+        except Exception:
+            pass  # Column already exists
+        
+        # Interview sessions table (B3: persist interview state)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS interview_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT UNIQUE NOT NULL,
+                user_id INTEGER NOT NULL,
+                data TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        
+        # Processing status table (B4: persist processing state)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS processing_status (
+                user_id INTEGER PRIMARY KEY,
+                status TEXT NOT NULL DEFAULT 'idle',
+                stage TEXT DEFAULT '',
+                progress INTEGER DEFAULT 0,
+                started_at TEXT,
+                completed_at TEXT,
+                error TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        
         await db.commit()
         print("✅ Database initialized successfully")
 
@@ -109,13 +143,24 @@ async def create_user(first_name: str, birth_year: int, email: str, session_toke
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
             """
-            INSERT INTO users (first_name, birth_year, email, session_token)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO users (first_name, birth_year, email, session_token, token_created_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (first_name, birth_year, email.lower(), session_token)
+            (first_name, birth_year, email.lower(), session_token, datetime.utcnow().isoformat())
         )
         await db.commit()
         return cursor.lastrowid
+
+async def invalidate_token(user_id: int) -> None:
+    """Invalidate a user's session token (logout)."""
+    import secrets
+    new_token = secrets.token_urlsafe(32)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET session_token = ?, token_created_at = '' WHERE id = ?",
+            (new_token, user_id)
+        )
+        await db.commit()
 
 async def get_user_by_token(token: str) -> dict | None:
     """Get user by session token."""
@@ -275,3 +320,73 @@ async def mark_chunk_failed(chunk_id: int, error_msg: str) -> None:
             (chunk_id,)
         )
         await db.commit()
+
+
+# ----- Interview Session Persistence (B3) -----
+
+async def save_interview_session(session_id: str, user_id: int, data: str) -> None:
+    """Save or update an interview session (JSON blob)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            INSERT INTO interview_sessions (session_id, user_id, data, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
+            """,
+            (session_id, user_id, data, datetime.utcnow().isoformat())
+        )
+        await db.commit()
+
+async def get_interview_session(session_id: str) -> dict | None:
+    """Get an interview session by ID."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM interview_sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+async def delete_interview_session(session_id: str) -> None:
+    """Delete an interview session."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "DELETE FROM interview_sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        await db.commit()
+
+
+# ----- Processing Status Persistence (B4) -----
+
+async def upsert_processing_status(user_id: int, status: str, stage: str = '', progress: int = 0,
+                                    started_at: str = None, completed_at: str = None, error: str = None) -> None:
+    """Insert or update processing status for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            INSERT INTO processing_status (user_id, status, stage, progress, started_at, completed_at, error)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                status = excluded.status,
+                stage = excluded.stage,
+                progress = excluded.progress,
+                started_at = COALESCE(excluded.started_at, processing_status.started_at),
+                completed_at = excluded.completed_at,
+                error = excluded.error
+            """,
+            (user_id, status, stage, progress, started_at, completed_at, error)
+        )
+        await db.commit()
+
+async def get_processing_status(user_id: int) -> dict | None:
+    """Get processing status for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM processing_status WHERE user_id = ?",
+            (user_id,)
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None

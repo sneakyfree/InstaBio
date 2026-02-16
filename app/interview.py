@@ -59,9 +59,58 @@ class InterviewSession:
     current_topic_index: int = 0
     status: str = "active"
 
+    def to_dict(self) -> dict:
+        """Serialize to a JSON-safe dict."""
+        return {
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "user_name": self.user_name,
+            "started_at": self.started_at.isoformat(),
+            "questions_asked": self.questions_asked,
+            "transcripts": self.transcripts,
+            "current_topic_index": self.current_topic_index,
+            "status": self.status,
+        }
 
-# In-memory session storage
+    @classmethod
+    def from_dict(cls, d: dict) -> "InterviewSession":
+        """Deserialize from a dict."""
+        return cls(
+            session_id=d["session_id"],
+            user_id=d["user_id"],
+            user_name=d["user_name"],
+            started_at=datetime.fromisoformat(d["started_at"]),
+            questions_asked=d.get("questions_asked", []),
+            transcripts=d.get("transcripts", []),
+            current_topic_index=d.get("current_topic_index", 0),
+            status=d.get("status", "active"),
+        )
+
+
+# In-memory session cache (write-through to DB)
 _sessions: Dict[str, InterviewSession] = {}
+
+
+async def _load_session_from_db(session_id: str) -> InterviewSession | None:
+    """Load an interview session from DB if not in memory cache."""
+    from . import database as db
+    row = await db.get_interview_session(session_id)
+    if row:
+        data = json.loads(row["data"])
+        session = InterviewSession.from_dict(data)
+        _sessions[session_id] = session  # populate cache
+        return session
+    return None
+
+
+async def _persist_session(session: InterviewSession) -> None:
+    """Persist an interview session to DB."""
+    from . import database as db
+    await db.save_interview_session(
+        session_id=session.session_id,
+        user_id=session.user_id,
+        data=json.dumps(session.to_dict())
+    )
 
 
 def get_opening_question(user_name: str) -> str:
@@ -79,6 +128,8 @@ async def get_next_question(user_id: int, session_id: str) -> str:
     Uses Ollama on Veron via the existing LLM client.
     """
     session = _sessions.get(session_id)
+    if not session:
+        session = await _load_session_from_db(session_id)
     if not session:
         return "Could you tell me more about that?"
 
@@ -136,7 +187,7 @@ def should_ask_next(transcript_text: str, silence_seconds: float) -> bool:
     return has_content and silence_seconds >= 10.0
 
 
-def start_session(user_id: int, user_name: str) -> InterviewSession:
+async def start_session(user_id: int, user_name: str) -> InterviewSession:
     """Start a new interview session."""
     session_id = str(uuid.uuid4())
     opening = get_opening_question(user_name)
@@ -149,12 +200,15 @@ def start_session(user_id: int, user_name: str) -> InterviewSession:
         questions_asked=[{"question": opening, "timestamp": datetime.utcnow().isoformat()}],
     )
     _sessions[session_id] = session
+    await _persist_session(session)
     return session
 
 
 async def next_question(session_id: str, transcript: str) -> str:
     """Record user transcript and generate next question."""
     session = _sessions.get(session_id)
+    if not session:
+        session = await _load_session_from_db(session_id)
     if not session:
         return "I'm sorry, I lost track of our conversation. Could you tell me more?"
 
@@ -174,12 +228,15 @@ async def next_question(session_id: str, transcript: str) -> str:
         "timestamp": datetime.utcnow().isoformat(),
     })
 
+    await _persist_session(session)
     return question
 
 
-def get_session_status(session_id: str) -> Optional[Dict]:
+async def get_session_status(session_id: str) -> Optional[Dict]:
     """Get interview session status."""
     session = _sessions.get(session_id)
+    if not session:
+        session = await _load_session_from_db(session_id)
     if not session:
         return None
 

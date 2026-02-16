@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2D5016">
     <title>Your Biography — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
-    
+
     <style>
         :root {
             --color-primary: #2D5016;
@@ -22,13 +23,15 @@
             --spacing: 24px;
             --radius: 16px;
         }
-        
-        *, *::before, *::after {
+
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        
+
         body {
             font-family: Georgia, 'Times New Roman', serif;
             font-size: var(--font-body);
@@ -37,7 +40,7 @@
             background: var(--color-background);
             min-height: 100vh;
         }
-        
+
         /* Navigation */
         .nav {
             background: var(--color-primary);
@@ -46,7 +49,7 @@
             top: 0;
             z-index: 100;
         }
-        
+
         .nav-content {
             max-width: 1200px;
             margin: 0 auto;
@@ -56,7 +59,7 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        
+
         .nav-logo {
             color: var(--color-white);
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -64,13 +67,13 @@
             font-weight: 700;
             text-decoration: none;
         }
-        
+
         .nav-links {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
         }
-        
+
         .nav-link {
             color: var(--color-white);
             text-decoration: none;
@@ -80,18 +83,19 @@
             font-size: 16px;
             transition: background 0.2s;
         }
-        
-        .nav-link:hover, .nav-link.active {
-            background: rgba(255,255,255,0.2);
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
         }
-        
+
         /* Layout */
         .layout {
             display: flex;
             max-width: 1200px;
             margin: 0 auto;
         }
-        
+
         /* Sidebar */
         .sidebar {
             width: 280px;
@@ -104,7 +108,7 @@
             overflow-y: auto;
             max-height: calc(100vh - 60px);
         }
-        
+
         .sidebar h2 {
             color: var(--color-primary);
             font-size: 18px;
@@ -113,15 +117,15 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
+
         .chapter-list {
             list-style: none;
         }
-        
+
         .chapter-item {
             margin-bottom: 8px;
         }
-        
+
         .chapter-link {
             display: block;
             padding: 12px 16px;
@@ -132,28 +136,28 @@
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             transition: all 0.2s;
         }
-        
+
         .chapter-link:hover {
             background: var(--color-cream);
         }
-        
+
         .chapter-link.active {
             background: var(--color-primary);
             color: var(--color-white);
         }
-        
+
         .chapter-number {
             font-weight: 700;
             margin-right: 8px;
         }
-        
+
         /* Main Content */
         .main {
             flex: 1;
             padding: calc(var(--spacing) * 2);
             max-width: 800px;
         }
-        
+
         /* Book Header */
         .book-header {
             text-align: center;
@@ -161,7 +165,7 @@
             padding-bottom: 32px;
             border-bottom: 2px solid var(--color-primary);
         }
-        
+
         .book-title {
             font-size: 42px;
             color: var(--color-primary);
@@ -169,13 +173,13 @@
             font-weight: normal;
             font-style: italic;
         }
-        
+
         .book-subtitle {
             font-size: 20px;
             color: var(--color-text-light);
             font-style: italic;
         }
-        
+
         /* Style Switcher */
         .style-switcher {
             display: flex;
@@ -183,7 +187,7 @@
             gap: 12px;
             margin: 24px 0;
         }
-        
+
         .style-btn {
             padding: 10px 20px;
             border: 2px solid var(--color-primary);
@@ -195,22 +199,23 @@
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             transition: all 0.2s;
         }
-        
-        .style-btn:hover, .style-btn.active {
+
+        .style-btn:hover,
+        .style-btn.active {
             background: var(--color-primary);
             color: var(--color-white);
         }
-        
+
         /* Chapter */
         .chapter {
             margin-bottom: 64px;
         }
-        
+
         .chapter-header {
             text-align: center;
             margin-bottom: 32px;
         }
-        
+
         .chapter-num {
             font-size: 14px;
             color: var(--color-text-light);
@@ -219,20 +224,20 @@
             margin-bottom: 8px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         .chapter-title {
             font-size: 32px;
             color: var(--color-primary);
             font-weight: normal;
         }
-        
+
         .chapter-period {
             font-size: 16px;
             color: var(--color-text-light);
             font-style: italic;
             margin-top: 8px;
         }
-        
+
         /* Paragraphs */
         .paragraph {
             margin-bottom: 24px;
@@ -242,19 +247,19 @@
             border-radius: 8px;
             transition: background 0.2s;
         }
-        
+
         .paragraph:hover {
             background: rgba(45, 80, 22, 0.05);
         }
-        
+
         .paragraph p {
             text-indent: 2em;
         }
-        
+
         .paragraph:first-child p {
             text-indent: 0;
         }
-        
+
         .paragraph:first-child p::first-letter {
             font-size: 3em;
             float: left;
@@ -262,7 +267,7 @@
             padding-right: 8px;
             color: var(--color-primary);
         }
-        
+
         /* Confidence Badge */
         .confidence-badge {
             display: inline-block;
@@ -274,7 +279,7 @@
             margin-left: 8px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         /* Citation Popup */
         .citation-popup {
             display: none;
@@ -285,28 +290,35 @@
             background: var(--color-white);
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
             max-width: 90%;
             width: 400px;
             z-index: 200;
         }
-        
+
         .citation-popup.show {
             display: block;
             animation: slideUp 0.3s ease;
         }
-        
+
         @keyframes slideUp {
-            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
         }
-        
+
         .citation-popup h4 {
             color: var(--color-primary);
             margin-bottom: 12px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         .citation-popup .original-text {
             font-style: italic;
             color: var(--color-text-light);
@@ -315,7 +327,7 @@
             border-radius: 8px;
             margin-bottom: 12px;
         }
-        
+
         .citation-popup .close-btn {
             position: absolute;
             top: 12px;
@@ -326,7 +338,7 @@
             cursor: pointer;
             color: var(--color-text-light);
         }
-        
+
         /* Progress Bar */
         .progress-bar {
             margin-top: 24px;
@@ -334,27 +346,27 @@
             background: var(--color-white);
             border-radius: 12px;
         }
-        
+
         .progress-label {
             font-size: 14px;
             color: var(--color-text-light);
             margin-bottom: 8px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         .progress-track {
             height: 8px;
             background: #E0D5C5;
             border-radius: 4px;
             overflow: hidden;
         }
-        
+
         .progress-fill {
             height: 100%;
             background: var(--color-primary);
             transition: width 0.5s ease;
         }
-        
+
         /* Share Button */
         .share-btn {
             display: inline-flex;
@@ -370,18 +382,19 @@
             margin-top: 24px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         .share-btn:hover {
             background: var(--color-primary-light);
         }
-        
+
         /* Loading & Empty States */
-        .loading, .empty-state {
+        .loading,
+        .empty-state {
             text-align: center;
             padding: 60px 20px;
             color: var(--color-text-light);
         }
-        
+
         .loading .spinner {
             width: 40px;
             height: 40px;
@@ -391,17 +404,19 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 16px;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         .empty-state h3 {
             color: var(--color-primary);
             margin-bottom: 8px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         .action-btn {
             display: inline-block;
             padding: 16px 32px;
@@ -412,29 +427,32 @@
             margin-top: 16px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         /* Mobile */
         @media (max-width: 768px) {
             .sidebar {
                 display: none;
             }
-            
+
             .main {
                 padding: var(--spacing);
             }
-            
+
             .book-title {
                 font-size: 32px;
             }
-            
+
             .chapter-title {
                 font-size: 24px;
             }
         }
-        
-        .hidden { display: none !important; }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
+
 <body>
     <!-- Navigation -->
     <nav class="nav">
@@ -449,7 +467,7 @@
             </div>
         </div>
     </nav>
-    
+
     <div class="layout">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
@@ -457,7 +475,7 @@
             <ul class="chapter-list" id="chapter-list">
                 <!-- Filled by JS -->
             </ul>
-            
+
             <div class="progress-bar">
                 <div class="progress-label">Your story so far</div>
                 <div class="progress-track">
@@ -465,40 +483,41 @@
                 </div>
             </div>
         </aside>
-        
+
         <!-- Main Content -->
         <main class="main" id="main-content">
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p>Loading your biography...</p>
             </div>
-            
+
             <div class="empty-state hidden" id="empty-state">
                 <h3>📝 Your biography isn't ready yet</h3>
                 <p>Record some memories, then we'll weave them into your life story.</p>
                 <a href="/record" class="action-btn">🎙️ Start Recording</a>
                 <br>
-                <a href="/progress" class="action-btn" style="margin-top: 8px; background: var(--color-text-light);">View Progress</a>
+                <a href="/progress" class="action-btn"
+                    style="margin-top: 8px; background: var(--color-text-light);">View Progress</a>
             </div>
-            
+
             <div class="hidden" id="biography-content">
                 <!-- Book Header -->
                 <header class="book-header">
                     <h1 class="book-title" id="bio-title">The Story of You</h1>
                     <p class="book-subtitle" id="bio-subtitle">A Life in Their Own Words</p>
-                    
+
                     <div class="style-switcher">
                         <button class="style-btn active" data-style="polished">✨ Polished</button>
                         <button class="style-btn" data-style="verbatim">📝 Verbatim</button>
                         <button class="style-btn" data-style="storybook">📚 Storybook</button>
                     </div>
                 </header>
-                
+
                 <!-- Chapters -->
                 <div id="chapters-container">
                     <!-- Filled by JS -->
                 </div>
-                
+
                 <div style="text-align: center; margin-top: 48px;">
                     <button class="share-btn" onclick="shareBiography()">
                         📤 Share with Family
@@ -507,7 +526,7 @@
             </div>
         </main>
     </div>
-    
+
     <!-- Citation Popup -->
     <div class="citation-popup" id="citation-popup">
         <button class="close-btn" onclick="closeCitation()">&times;</button>
@@ -519,33 +538,34 @@
             <span id="citation-session">Session: Unknown</span>
         </p>
     </div>
-    
+
+    <script src="/static/shared.js"></script>
     <script>
         const API_URL = '/api';
         const token = localStorage.getItem('instabio_token');
-        
+
         if (!token) {
             window.location.href = '/onboard';
         }
-        
+
         const loading = document.getElementById('loading');
         const emptyState = document.getElementById('empty-state');
         const biographyContent = document.getElementById('biography-content');
         const chaptersContainer = document.getElementById('chapters-container');
         const chapterList = document.getElementById('chapter-list');
         const citationPopup = document.getElementById('citation-popup');
-        
+
         let currentBiography = null;
-        
+
         async function loadBiography() {
             try {
                 const response = await fetch(`${API_URL}/biography`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
+
                 loading.classList.add('hidden');
-                
+
                 if (!data.success || !data.biography) {
                     // Check if processing
                     if (data.status === 'processing') {
@@ -562,27 +582,27 @@
                     }
                     return;
                 }
-                
+
                 currentBiography = data.biography;
                 renderBiography(data.biography);
                 biographyContent.classList.remove('hidden');
-                
+
             } catch (err) {
                 console.error('Failed to load biography:', err);
                 loading.classList.add('hidden');
                 emptyState.classList.remove('hidden');
             }
         }
-        
+
         function renderBiography(bio) {
             // Update header
             document.getElementById('bio-title').textContent = bio.title;
             document.getElementById('bio-subtitle').textContent = bio.subtitle || '';
-            
+
             // Render chapters
             chaptersContainer.innerHTML = '';
             chapterList.innerHTML = '';
-            
+
             bio.chapters.forEach((chapter, idx) => {
                 // Sidebar link
                 const li = document.createElement('li');
@@ -594,81 +614,81 @@
                     </a>
                 `;
                 chapterList.appendChild(li);
-                
+
                 // Chapter content
                 const chapterEl = document.createElement('article');
                 chapterEl.className = 'chapter';
                 chapterEl.id = `chapter-${chapter.number}`;
-                
+
                 let paragraphsHtml = '';
                 (chapter.paragraphs || []).forEach((para, pIdx) => {
-                    const confidenceNotes = (para.confidence_notes || []).length > 0 
-                        ? `<span class="confidence-badge">⚠️ ${para.confidence_notes[0]}</span>` 
+                    const confidenceNotes = (para.confidence_notes || []).length > 0
+                        ? `<span class="confidence-badge">⚠️ ${para.confidence_notes[0]}</span>`
                         : '';
-                    
+
                     paragraphsHtml += `
                         <div class="paragraph" onclick="showCitation(${idx}, ${pIdx})">
-                            <p>${para.text}${confidenceNotes}</p>
+                            <p>${escapeHtml(para.text)}${confidenceNotes}</p>
                         </div>
                     `;
                 });
-                
+
                 chapterEl.innerHTML = `
                     <header class="chapter-header">
                         <div class="chapter-num">Chapter ${chapter.number}</div>
-                        <h2 class="chapter-title">${chapter.title}</h2>
-                        ${chapter.time_period ? `<p class="chapter-period">${chapter.time_period}</p>` : ''}
+                        <h2 class="chapter-title">${escapeHtml(chapter.title)}</h2>
+                        ${chapter.time_period ? `<p class="chapter-period">${escapeHtml(chapter.time_period)}</p>` : ''}
                     </header>
                     <div class="chapter-body">
                         ${paragraphsHtml || '<p class="paragraph">Content is being generated...</p>'}
                     </div>
                 `;
-                
+
                 chaptersContainer.appendChild(chapterEl);
             });
-            
+
             // Update progress
-            const completedChapters = bio.chapters.filter(c => 
-                c.paragraphs && c.paragraphs.length > 0 && 
+            const completedChapters = bio.chapters.filter(c =>
+                c.paragraphs && c.paragraphs.length > 0 &&
                 !c.paragraphs[0].text.includes('being processed')
             ).length;
             const progress = Math.round((completedChapters / bio.chapters.length) * 100);
             document.getElementById('story-progress').style.width = `${progress}%`;
         }
-        
+
         function showCitation(chapterIdx, paraIdx) {
             if (!currentBiography) return;
-            
+
             const chapter = currentBiography.chapters[chapterIdx];
             const para = chapter.paragraphs[paraIdx];
-            
+
             if (para.citations && para.citations.length > 0) {
                 const citation = para.citations[0];
-                document.getElementById('citation-text').textContent = 
+                document.getElementById('citation-text').textContent =
                     citation.original_text || '"Original recording text..."';
-                document.getElementById('citation-session').textContent = 
+                document.getElementById('citation-session').textContent =
                     `Session: ${citation.session_uuid || 'Recording session'}`;
             } else {
-                document.getElementById('citation-text').textContent = 
+                document.getElementById('citation-text').textContent =
                     '"This passage is based on your recordings."';
-                document.getElementById('citation-session').textContent = 
+                document.getElementById('citation-session').textContent =
                     'Tap any paragraph to see its source.';
             }
-            
+
             citationPopup.classList.add('show');
         }
-        
+
         function closeCitation() {
             citationPopup.classList.remove('show');
         }
-        
+
         // Close citation on outside click
         document.addEventListener('click', (e) => {
             if (!citationPopup.contains(e.target) && !e.target.closest('.paragraph')) {
                 closeCitation();
             }
         });
-        
+
         // Style switcher
         document.querySelectorAll('.style-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -678,7 +698,7 @@
                 // For now, just visual feedback
             });
         });
-        
+
         // Chapter navigation active state
         document.querySelectorAll('.chapter-link').forEach(link => {
             link.addEventListener('click', () => {
@@ -686,7 +706,7 @@
                 link.classList.add('active');
             });
         });
-        
+
         function shareBiography() {
             if (navigator.share) {
                 navigator.share({
@@ -699,9 +719,10 @@
                 navigator.clipboard.writeText(window.location.href);
             }
         }
-        
+
         // Initialize
         loadBiography();
     </script>
 </body>
+
 </html>

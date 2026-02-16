@@ -6,6 +6,7 @@ Your story. Forever.
 """
 
 import os
+import html as html_mod
 import uuid
 import secrets
 import asyncio
@@ -156,6 +157,18 @@ async def get_current_user(authorization: str = Header(None)) -> dict:
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     
+    # Check token expiration (90 days)
+    TOKEN_EXPIRY_DAYS = int(os.environ.get("TOKEN_EXPIRY_DAYS", "90"))
+    token_created = user.get("token_created_at", "")
+    if token_created:
+        try:
+            created = datetime.fromisoformat(token_created)
+            from datetime import timedelta
+            if datetime.utcnow() - created > timedelta(days=TOKEN_EXPIRY_DAYS):
+                raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
+        except ValueError:
+            pass  # Malformed date — allow through, will be fixed on next login
+    
     return user
 
 # ----- API Endpoints -----
@@ -249,6 +262,19 @@ async def register(data: RegisterRequest, request: Request):
         first_name=data.first_name,
         message=f"Welcome, {data.first_name}! Your story begins now."
     )
+
+@app.post("/api/logout")
+async def logout(authorization: str = Header(None)):
+    """
+    Log out the current user by invalidating their session token.
+    The frontend should clear localStorage after calling this.
+    """
+    user = await get_current_user(authorization)
+    await db.invalidate_token(user['id'])
+    return {
+        "success": True,
+        "message": "Logged out successfully."
+    }
 
 @app.post("/api/session/start")
 async def start_session(authorization: str = Header(None)):
@@ -354,6 +380,11 @@ async def get_transcripts(
     """
     user = await get_current_user(authorization)
     transcripts = await db.get_user_transcripts(user['id'], search)
+    
+    # Escape transcript text for safe rendering (B6 defense-in-depth)
+    for t in transcripts:
+        if 'text' in t:
+            t['text'] = html_mod.escape(t['text'])
     
     # Calculate total words
     total_words = sum(len(t['text'].split()) for t in transcripts)
@@ -664,8 +695,7 @@ async def mark_recording_video(
 
 # ----- Story Processing API -----
 
-# In-memory storage for processing status (use database in production)
-_processing_status: dict = {}
+# In-memory caches for generated content (persisted to DB in G10)
 _entities_cache: dict = {}
 _timeline_cache: dict = {}
 _biography_cache: dict = {}
@@ -684,7 +714,8 @@ async def trigger_processing(
     user_id = user['id']
     
     # Check if already processing
-    if user_id in _processing_status and _processing_status[user_id].get("status") == "processing":
+    existing = await db.get_processing_status(user_id)
+    if existing and existing.get("status") == "processing":
         return {
             "success": True,
             "status": "already_processing",
@@ -692,12 +723,13 @@ async def trigger_processing(
         }
     
     # Start processing in background
-    _processing_status[user_id] = {
-        "status": "processing",
-        "progress": 0,
-        "stage": "starting",
-        "started_at": datetime.utcnow().isoformat()
-    }
+    await db.upsert_processing_status(
+        user_id=user_id,
+        status="processing",
+        stage="starting",
+        progress=0,
+        started_at=datetime.utcnow().isoformat()
+    )
     
     background_tasks.add_task(run_processing_pipeline, user_id, user['first_name'])
     
@@ -711,23 +743,19 @@ async def run_processing_pipeline(user_id: int, user_name: str):
     """Run the full processing pipeline for a user."""
     try:
         # Stage 1: Get transcripts
-        _processing_status[user_id]["stage"] = "fetching_transcripts"
-        _processing_status[user_id]["progress"] = 10
+        await db.upsert_processing_status(user_id, "processing", "fetching_transcripts", 10)
         
         transcripts = await db.get_user_transcripts(user_id)
         
         if not transcripts:
-            _processing_status[user_id] = {
-                "status": "complete",
-                "progress": 100,
-                "stage": "no_transcripts",
-                "message": "No transcripts to process. Record some memories first!"
-            }
+            await db.upsert_processing_status(
+                user_id, "complete", "no_transcripts", 100,
+                completed_at=datetime.utcnow().isoformat()
+            )
             return
         
         # Stage 2: Entity extraction
-        _processing_status[user_id]["stage"] = "extracting_entities"
-        _processing_status[user_id]["progress"] = 20
+        await db.upsert_processing_status(user_id, "processing", "extracting_entities", 20)
         
         extractor = get_extractor()
         extraction_results = []
@@ -738,22 +766,21 @@ async def run_processing_pipeline(user_id: int, user_name: str):
                 session_id=t.get('session_uuid')
             )
             extraction_results.append(result)
-            _processing_status[user_id]["progress"] = 20 + int((i / len(transcripts)) * 20)
+            progress = 20 + int((i / len(transcripts)) * 20)
+            await db.upsert_processing_status(user_id, "processing", "extracting_entities", progress)
         
         # Merge all extractions
         merged_extraction = extractor.merge_results(extraction_results)
         _entities_cache[user_id] = merged_extraction.to_dict()
         
         # Stage 3: Build timeline
-        _processing_status[user_id]["stage"] = "building_timeline"
-        _processing_status[user_id]["progress"] = 45
+        await db.upsert_processing_status(user_id, "processing", "building_timeline", 45)
         
         timeline = await build_timeline(merged_extraction.events, merged_extraction.dates)
         _timeline_cache[user_id] = timeline
         
         # Stage 4: Generate biography
-        _processing_status[user_id]["stage"] = "generating_biography"
-        _processing_status[user_id]["progress"] = 55
+        await db.upsert_processing_status(user_id, "processing", "generating_biography", 55)
         
         bio_generator = get_biography_generator()
         transcript_dicts = [{"text": t['text'], "session_id": t.get('session_uuid')} for t in transcripts]
@@ -767,11 +794,10 @@ async def run_processing_pipeline(user_id: int, user_name: str):
         )
         _biography_cache[user_id] = biography.to_dict()
         
-        _processing_status[user_id]["progress"] = 75
+        await db.upsert_processing_status(user_id, "processing", "generating_biography", 75)
         
         # Stage 5: Generate journal
-        _processing_status[user_id]["stage"] = "generating_journal"
-        _processing_status[user_id]["progress"] = 80
+        await db.upsert_processing_status(user_id, "processing", "generating_journal", 80)
         
         journal_generator = get_journal_generator()
         journal = await journal_generator.generate_journal(
@@ -783,30 +809,16 @@ async def run_processing_pipeline(user_id: int, user_name: str):
         _journal_cache[user_id] = journal.to_dict()
         
         # Complete
-        _processing_status[user_id] = {
-            "status": "complete",
-            "progress": 100,
-            "stage": "complete",
-            "completed_at": datetime.utcnow().isoformat(),
-            "stats": {
-                "transcripts_processed": len(transcripts),
-                "entities_extracted": {
-                    "people": len(merged_extraction.people),
-                    "places": len(merged_extraction.places),
-                    "events": len(merged_extraction.events)
-                },
-                "chapters_generated": len(biography.chapters),
-                "journal_entries": len(journal.entries)
-            }
-        }
+        await db.upsert_processing_status(
+            user_id, "complete", "complete", 100,
+            completed_at=datetime.utcnow().isoformat()
+        )
         
     except Exception as e:
-        _processing_status[user_id] = {
-            "status": "error",
-            "progress": 0,
-            "stage": "error",
-            "error": str(e)
-        }
+        await db.upsert_processing_status(
+            user_id, "error", "error", 0,
+            error=str(e)
+        )
 
 @app.get("/api/progress")
 async def get_progress(authorization: str = Header(None)):
@@ -814,7 +826,8 @@ async def get_progress(authorization: str = Header(None)):
     user = await get_current_user(authorization)
     user_id = user['id']
     
-    if user_id not in _processing_status:
+    status = await db.get_processing_status(user_id)
+    if not status:
         return {
             "success": True,
             "status": "not_started",
@@ -825,7 +838,9 @@ async def get_progress(authorization: str = Header(None)):
     
     return {
         "success": True,
-        **_processing_status[user_id]
+        "status": status["status"],
+        "progress": status["progress"],
+        "stage": status["stage"],
     }
 
 @app.get("/api/entities")
@@ -872,16 +887,15 @@ async def get_biography(
     user_id = user['id']
     
     # Check processing status
-    if user_id in _processing_status:
-        status = _processing_status[user_id]
-        if status.get("status") == "processing":
-            return {
-                "success": True,
-                "status": "processing",
-                "progress": status.get("progress", 0),
-                "stage": status.get("stage", "unknown"),
-                "message": "Your biography is being generated..."
-            }
+    proc_status = await db.get_processing_status(user_id)
+    if proc_status and proc_status.get("status") == "processing":
+        return {
+            "success": True,
+            "status": "processing",
+            "progress": proc_status.get("progress", 0),
+            "stage": proc_status.get("stage", "unknown"),
+            "message": "Your biography is being generated..."
+        }
     
     if user_id not in _biography_cache:
         return {
@@ -1028,7 +1042,7 @@ async def api_interview_start(
     """Start an interview session — returns opening question + avatar video URL."""
     user = await get_current_user(authorization)
     
-    session = start_interview_session(user['id'], user['first_name'])
+    session = await start_interview_session(user['id'], user['first_name'])
     opening_question = session.questions_asked[0]['question']
     
     # Try to generate avatar video; None means use fallback
@@ -1073,7 +1087,7 @@ async def api_interview_portraits(authorization: str = Header(None)):
 async def api_interview_status(session_id: str, authorization: str = Header(None)):
     """Get interview session status."""
     await get_current_user(authorization)
-    status = get_interview_status(session_id)
+    status = await get_interview_status(session_id)
     if not status:
         raise HTTPException(status_code=404, detail="Interview session not found")
     return {"success": True, **status}

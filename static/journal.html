@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2D5016">
     <title>Your Life Journal — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
-    
+
     <style>
         :root {
             --color-primary: #2D5016;
@@ -23,13 +24,15 @@
             --spacing: 24px;
             --radius: 16px;
         }
-        
-        *, *::before, *::after {
+
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        
+
         body {
             font-family: Georgia, 'Times New Roman', serif;
             font-size: var(--font-body);
@@ -38,7 +41,7 @@
             background: var(--color-background);
             min-height: 100vh;
         }
-        
+
         /* Navigation */
         .nav {
             background: var(--color-primary);
@@ -47,7 +50,7 @@
             top: 0;
             z-index: 100;
         }
-        
+
         .nav-content {
             max-width: 1200px;
             margin: 0 auto;
@@ -57,7 +60,7 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        
+
         .nav-logo {
             color: var(--color-white);
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -65,13 +68,13 @@
             font-weight: 700;
             text-decoration: none;
         }
-        
+
         .nav-links {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
         }
-        
+
         .nav-link {
             color: var(--color-white);
             text-decoration: none;
@@ -81,18 +84,19 @@
             font-size: 16px;
             transition: background 0.2s;
         }
-        
-        .nav-link:hover, .nav-link.active {
-            background: rgba(255,255,255,0.2);
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
         }
-        
+
         /* Container */
         .container {
             max-width: 900px;
             margin: 0 auto;
             padding: var(--spacing);
         }
-        
+
         /* Journal Header */
         .journal-header {
             text-align: center;
@@ -100,9 +104,9 @@
             padding: 32px;
             background: var(--color-white);
             border-radius: var(--radius);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
-        
+
         .journal-title {
             font-size: 36px;
             color: var(--color-primary);
@@ -110,12 +114,12 @@
             font-weight: normal;
             font-style: italic;
         }
-        
+
         .journal-subtitle {
             color: var(--color-text-light);
             font-size: 18px;
         }
-        
+
         .reconstructed-badge {
             display: inline-block;
             background: #FEF3C7;
@@ -126,7 +130,7 @@
             margin-top: 12px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         /* Timeline Navigation */
         .timeline-nav {
             display: flex;
@@ -135,7 +139,7 @@
             flex-wrap: wrap;
             margin-bottom: 32px;
         }
-        
+
         .decade-btn {
             padding: 12px 20px;
             background: var(--color-white);
@@ -147,28 +151,29 @@
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             transition: all 0.2s;
         }
-        
-        .decade-btn:hover, .decade-btn.active {
+
+        .decade-btn:hover,
+        .decade-btn.active {
             background: var(--color-primary);
             color: var(--color-white);
         }
-        
+
         /* Journal Entries */
         .entries-container {
             display: flex;
             flex-direction: column;
             gap: 24px;
         }
-        
+
         .journal-entry {
             background: var(--color-paper);
             border-radius: var(--radius);
             padding: 32px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
             position: relative;
             border-left: 4px solid var(--color-primary);
         }
-        
+
         .journal-entry::before {
             content: '';
             position: absolute;
@@ -179,20 +184,20 @@
             background: linear-gradient(90deg, var(--color-primary) 0%, transparent 100%);
             border-radius: var(--radius) var(--radius) 0 0;
         }
-        
+
         .entry-header {
             margin-bottom: 20px;
             padding-bottom: 16px;
             border-bottom: 1px solid #E0D5C5;
         }
-        
+
         .entry-date {
             font-size: 24px;
             color: var(--color-primary);
             font-weight: normal;
             margin-bottom: 4px;
         }
-        
+
         .entry-granularity {
             font-size: 14px;
             color: var(--color-text-light);
@@ -200,21 +205,21 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
+
         .entry-text {
             font-size: 20px;
             line-height: 1.8;
             color: var(--color-text);
         }
-        
+
         .entry-text p {
             margin-bottom: 16px;
         }
-        
+
         .entry-text p:last-child {
             margin-bottom: 0;
         }
-        
+
         .entry-footer {
             margin-top: 20px;
             padding-top: 16px;
@@ -225,7 +230,7 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        
+
         .source-link {
             color: var(--color-primary);
             text-decoration: none;
@@ -235,11 +240,11 @@
             align-items: center;
             gap: 6px;
         }
-        
+
         .source-link:hover {
             text-decoration: underline;
         }
-        
+
         .confidence-tag {
             font-size: 12px;
             padding: 4px 10px;
@@ -248,14 +253,15 @@
             border-radius: 12px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         /* Loading & Empty States */
-        .loading, .empty-state {
+        .loading,
+        .empty-state {
             text-align: center;
             padding: 60px 20px;
             color: var(--color-text-light);
         }
-        
+
         .spinner {
             width: 40px;
             height: 40px;
@@ -265,17 +271,19 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 16px;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         .empty-state h3 {
             color: var(--color-primary);
             margin-bottom: 8px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         .action-btn {
             display: inline-block;
             padding: 16px 32px;
@@ -286,13 +294,13 @@
             margin-top: 16px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         /* Timeline Visual */
         .timeline-visual {
             position: relative;
             padding-left: 40px;
         }
-        
+
         .timeline-visual::before {
             content: '';
             position: absolute;
@@ -303,7 +311,7 @@
             background: var(--color-primary);
             opacity: 0.3;
         }
-        
+
         .timeline-visual .journal-entry::before {
             content: '';
             position: absolute;
@@ -315,7 +323,7 @@
             border-radius: 50%;
             border: 3px solid var(--color-background);
         }
-        
+
         /* Date Range Filter */
         .filter-section {
             background: var(--color-white);
@@ -328,13 +336,13 @@
             flex-wrap: wrap;
             justify-content: center;
         }
-        
+
         .filter-section label {
             font-size: 14px;
             color: var(--color-text-light);
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         .filter-section input {
             padding: 8px 12px;
             border: 2px solid #E0D5C5;
@@ -342,26 +350,29 @@
             font-size: 14px;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
+
         /* Mobile */
         @media (max-width: 768px) {
             .timeline-visual {
                 padding-left: 0;
             }
-            
+
             .timeline-visual::before,
             .timeline-visual .journal-entry::before {
                 display: none;
             }
-            
+
             .journal-entry {
                 padding: 20px;
             }
         }
-        
-        .hidden { display: none !important; }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
+
 <body>
     <!-- Navigation -->
     <nav class="nav">
@@ -376,7 +387,7 @@
             </div>
         </div>
     </nav>
-    
+
     <div class="container">
         <!-- Journal Header -->
         <header class="journal-header">
@@ -384,82 +395,85 @@
             <p class="journal-subtitle">Memories across the years</p>
             <span class="reconstructed-badge">✨ Reconstructed from memory</span>
         </header>
-        
+
         <!-- Timeline Navigation -->
         <div class="timeline-nav" id="timeline-nav">
             <button class="decade-btn active" data-decade="all">All Years</button>
             <!-- Decades added by JS -->
         </div>
-        
+
         <!-- Loading -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <p>Loading your journal...</p>
         </div>
-        
+
         <!-- Empty State -->
         <div class="empty-state hidden" id="empty-state">
             <h3>📅 Your journal isn't ready yet</h3>
-            <p>Record some memories about different times in your life, and we'll create journal entries for those periods.</p>
+            <p>Record some memories about different times in your life, and we'll create journal entries for those
+                periods.</p>
             <a href="/record" class="action-btn">🎙️ Start Recording</a>
             <br>
-            <a href="/progress" class="action-btn" style="margin-top: 8px; background: var(--color-text-light);">View Progress</a>
+            <a href="/progress" class="action-btn" style="margin-top: 8px; background: var(--color-text-light);">View
+                Progress</a>
         </div>
-        
+
         <!-- Entries Container -->
         <div class="entries-container timeline-visual hidden" id="entries-container">
             <!-- Entries added by JS -->
         </div>
     </div>
-    
+
+    <script src="/static/shared.js"></script>
     <script>
         const API_URL = '/api';
         const token = localStorage.getItem('instabio_token');
-        
+
         if (!token) {
             window.location.href = '/onboard';
         }
-        
+
         const loading = document.getElementById('loading');
         const emptyState = document.getElementById('empty-state');
         const entriesContainer = document.getElementById('entries-container');
         const timelineNav = document.getElementById('timeline-nav');
-        
+
         let allEntries = [];
-        
+
         async function loadJournal() {
             try {
                 const response = await fetch(`${API_URL}/journal`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
+
                 loading.classList.add('hidden');
-                
+
                 if (!data.success || !data.journal || !data.journal.entries || data.journal.entries.length === 0) {
                     emptyState.classList.remove('hidden');
                     return;
                 }
-                
+
                 allEntries = data.journal.entries;
-                
+
                 // Build decade navigation
                 buildDecadeNav(allEntries);
-                
+
                 // Render entries
                 renderEntries(allEntries);
                 entriesContainer.classList.remove('hidden');
-                
+
             } catch (err) {
                 console.error('Failed to load journal:', err);
                 loading.classList.add('hidden');
                 emptyState.classList.remove('hidden');
             }
         }
-        
+
         function buildDecadeNav(entries) {
             const decades = new Set();
-            
+
             entries.forEach(entry => {
                 const yearMatch = entry.date.match(/(19|20)\d{2}/);
                 if (yearMatch) {
@@ -467,9 +481,9 @@
                     decades.add(decade);
                 }
             });
-            
+
             const sortedDecades = Array.from(decades).sort();
-            
+
             sortedDecades.forEach(decade => {
                 const btn = document.createElement('button');
                 btn.className = 'decade-btn';
@@ -479,15 +493,15 @@
                 timelineNav.appendChild(btn);
             });
         }
-        
+
         function filterByDecade(decade) {
             // Update active button
             document.querySelectorAll('.decade-btn').forEach(btn => {
-                btn.classList.toggle('active', 
+                btn.classList.toggle('active',
                     decade === 'all' ? btn.dataset.decade === 'all' : btn.dataset.decade == decade
                 );
             });
-            
+
             // Filter entries
             let filtered = allEntries;
             if (decade !== 'all') {
@@ -500,13 +514,13 @@
                     return false;
                 });
             }
-            
+
             renderEntries(filtered);
         }
-        
+
         function renderEntries(entries) {
             entriesContainer.innerHTML = '';
-            
+
             if (entries.length === 0) {
                 entriesContainer.innerHTML = `
                     <div class="empty-state">
@@ -515,24 +529,24 @@
                 `;
                 return;
             }
-            
+
             entries.forEach(entry => {
                 const entryEl = document.createElement('article');
                 entryEl.className = 'journal-entry';
-                
+
                 // Format the text with paragraphs
                 const textHtml = entry.text
                     .split('\n')
                     .filter(p => p.trim())
-                    .map(p => `<p>${p}</p>`)
+                    .map(p => `<p>${escapeHtml(p)}</p>`)
                     .join('');
-                
-                const confidenceLabel = entry.confidence === 'exact' 
+
+                const confidenceLabel = entry.confidence === 'exact'
                     ? '✓ From recording'
-                    : entry.confidence === 'approximate' 
+                    : entry.confidence === 'approximate'
                         ? '≈ Approximate'
                         : '∿ Inferred';
-                
+
                 entryEl.innerHTML = `
                     <header class="entry-header">
                         <h2 class="entry-date">${entry.date_display || entry.date}</h2>
@@ -548,11 +562,11 @@
                         <span class="confidence-tag">${confidenceLabel}</span>
                     </footer>
                 `;
-                
+
                 entriesContainer.appendChild(entryEl);
             });
         }
-        
+
         function formatGranularity(g) {
             const labels = {
                 'daily': 'Daily Entry',
@@ -563,14 +577,15 @@
             };
             return labels[g] || g;
         }
-        
+
         // Handle "All Years" button
         document.querySelector('.decade-btn[data-decade="all"]').onclick = () => {
             filterByDecade('all');
         };
-        
+
         // Initialize
         loadJournal();
     </script>
 </body>
+
 </html>
