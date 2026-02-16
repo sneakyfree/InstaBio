@@ -12,7 +12,7 @@ import secrets
 import asyncio
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional
 from contextlib import asynccontextmanager
 
@@ -85,8 +85,13 @@ async def transcription_worker():
     while True:
         try:
             await transcribe_pending_chunks()
+        except asyncio.CancelledError:
+            logger.info("Transcription worker shutting down")
+            break
+        except (OSError, ConnectionError) as e:
+            logger.warning(f"Transcription worker I/O error (will retry): {e}")
         except Exception as e:
-            print(f"Transcription worker error: {e}")
+            logger.error(f"Transcription worker unexpected error: {e}", exc_info=True)
         await asyncio.sleep(10)  # Check every 10 seconds
 
 # ----- App Setup -----
@@ -109,6 +114,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# HTTPS redirect (enable in production with FORCE_HTTPS=1)
+if os.environ.get("FORCE_HTTPS", "").strip() == "1":
+    from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 # Serve static files (HTML, CSS, JS)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -164,7 +174,7 @@ async def get_current_user(authorization: str = Header(None)) -> dict:
         try:
             created = datetime.fromisoformat(token_created)
             from datetime import timedelta
-            if datetime.utcnow() - created > timedelta(days=TOKEN_EXPIRY_DAYS):
+            if datetime.now(UTC) - created > timedelta(days=TOKEN_EXPIRY_DAYS):
                 raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
         except ValueError:
             pass  # Malformed date — allow through, will be fixed on next login
@@ -214,7 +224,7 @@ async def health():
     return {
         "status": "healthy",
         "whisper_available": is_whisper_available(),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(UTC).isoformat()
     }
 
 @app.post("/api/register", response_model=RegisterResponse)
@@ -728,7 +738,7 @@ async def trigger_processing(
         status="processing",
         stage="starting",
         progress=0,
-        started_at=datetime.utcnow().isoformat()
+        started_at=datetime.now(UTC).isoformat()
     )
     
     background_tasks.add_task(run_processing_pipeline, user_id, user['first_name'])
@@ -750,7 +760,7 @@ async def run_processing_pipeline(user_id: int, user_name: str):
         if not transcripts:
             await db.upsert_processing_status(
                 user_id, "complete", "no_transcripts", 100,
-                completed_at=datetime.utcnow().isoformat()
+                completed_at=datetime.now(UTC).isoformat()
             )
             return
         
@@ -772,12 +782,14 @@ async def run_processing_pipeline(user_id: int, user_name: str):
         # Merge all extractions
         merged_extraction = extractor.merge_results(extraction_results)
         _entities_cache[user_id] = merged_extraction.to_dict()
+        await db.save_cache_result(user_id, "entities", _entities_cache[user_id])
         
         # Stage 3: Build timeline
         await db.upsert_processing_status(user_id, "processing", "building_timeline", 45)
         
         timeline = await build_timeline(merged_extraction.events, merged_extraction.dates)
         _timeline_cache[user_id] = timeline
+        await db.save_cache_result(user_id, "timeline", _timeline_cache[user_id])
         
         # Stage 4: Generate biography
         await db.upsert_processing_status(user_id, "processing", "generating_biography", 55)
@@ -793,6 +805,7 @@ async def run_processing_pipeline(user_id: int, user_name: str):
             style=BiographyStyle.POLISHED
         )
         _biography_cache[user_id] = biography.to_dict()
+        await db.save_cache_result(user_id, "biography", _biography_cache[user_id])
         
         await db.upsert_processing_status(user_id, "processing", "generating_biography", 75)
         
@@ -807,11 +820,12 @@ async def run_processing_pipeline(user_id: int, user_name: str):
             transcripts=transcript_dicts
         )
         _journal_cache[user_id] = journal.to_dict()
+        await db.save_cache_result(user_id, "journal", _journal_cache[user_id])
         
         # Complete
         await db.upsert_processing_status(
             user_id, "complete", "complete", 100,
-            completed_at=datetime.utcnow().isoformat()
+            completed_at=datetime.now(UTC).isoformat()
         )
         
     except Exception as e:
@@ -850,10 +864,14 @@ async def get_entities(authorization: str = Header(None)):
     user_id = user['id']
     
     if user_id not in _entities_cache:
-        return {
-            "success": False,
-            "message": "No entities extracted yet. Run POST /api/process first."
-        }
+        cached = await db.get_cache_result(user_id, "entities")
+        if cached:
+            _entities_cache[user_id] = cached
+        else:
+            return {
+                "success": False,
+                "message": "No entities extracted yet. Run POST /api/process first."
+            }
     
     return {
         "success": True,
@@ -867,10 +885,14 @@ async def get_timeline(authorization: str = Header(None)):
     user_id = user['id']
     
     if user_id not in _timeline_cache:
-        return {
-            "success": False,
-            "message": "No timeline generated yet. Run POST /api/process first."
-        }
+        cached = await db.get_cache_result(user_id, "timeline")
+        if cached:
+            _timeline_cache[user_id] = cached
+        else:
+            return {
+                "success": False,
+                "message": "No timeline generated yet. Run POST /api/process first."
+            }
     
     return {
         "success": True,
@@ -898,10 +920,14 @@ async def get_biography(
         }
     
     if user_id not in _biography_cache:
-        return {
-            "success": False,
-            "message": "No biography generated yet. Run POST /api/process first."
-        }
+        cached = await db.get_cache_result(user_id, "biography")
+        if cached:
+            _biography_cache[user_id] = cached
+        else:
+            return {
+                "success": False,
+                "message": "No biography generated yet. Run POST /api/process first."
+            }
     
     return {
         "success": True,
@@ -918,10 +944,14 @@ async def get_biography_chapter(
     user_id = user['id']
     
     if user_id not in _biography_cache:
-        return {
-            "success": False,
-            "message": "No biography generated yet."
-        }
+        cached = await db.get_cache_result(user_id, "biography")
+        if cached:
+            _biography_cache[user_id] = cached
+        else:
+            return {
+                "success": False,
+                "message": "No biography generated yet."
+            }
     
     chapters = _biography_cache[user_id].get("chapters", [])
     
@@ -945,10 +975,14 @@ async def get_journal(
     user_id = user['id']
     
     if user_id not in _journal_cache:
-        return {
-            "success": False,
-            "message": "No journal generated yet. Run POST /api/process first."
-        }
+        cached = await db.get_cache_result(user_id, "journal")
+        if cached:
+            _journal_cache[user_id] = cached
+        else:
+            return {
+                "success": False,
+                "message": "No journal generated yet. Run POST /api/process first."
+            }
     
     journal = _journal_cache[user_id]
     entries = journal.get("entries", [])
@@ -984,10 +1018,14 @@ async def get_journal_entry(
     user_id = user['id']
     
     if user_id not in _journal_cache:
-        return {
-            "success": False,
-            "message": "No journal generated yet."
-        }
+        cached = await db.get_cache_result(user_id, "journal")
+        if cached:
+            _journal_cache[user_id] = cached
+        else:
+            return {
+                "success": False,
+                "message": "No journal generated yet."
+            }
     
     entries = _journal_cache[user_id].get("entries", [])
     
