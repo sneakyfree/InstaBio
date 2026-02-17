@@ -452,6 +452,12 @@
             } catch (err) {
                 console.error('Failed to load journal:', err);
                 loading.classList.add('hidden');
+                emptyState.innerHTML = `
+                    <h3>💛 We're still working on it</h3>
+                    <p>We're having a little trouble reaching our writing assistant right now, but your recordings are completely safe.</p>
+                    <p style="margin-top: 12px;">Your journal will be ready as soon as we reconnect!</p>
+                    <a href="/record" class="action-btn" style="margin-top: 16px;">🎙️ Record More Memories</a>
+                `;
                 emptyState.classList.remove('hidden');
             }
         }

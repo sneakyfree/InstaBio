@@ -1,13 +1,28 @@
 """
 InstaBio LLM Client
 Connects to Ollama running on Veron 1 (5090 GPU)
+
+Fallback chain: SSH tunnel → direct HTTP → mock
 """
 
 import asyncio
 import json
+import os
 import subprocess
+import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
+from enum import Enum
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+
+class Transport(Enum):
+    SSH = "ssh"
+    HTTP = "http"
+    MOCK = "mock"
 
 
 @dataclass
@@ -23,25 +38,37 @@ class LLMResponse:
 class OllamaClient:
     """
     Client for Ollama running on Veron 1.
-    Uses SSH tunnel to communicate with the remote Ollama instance.
+    Fallback chain: SSH tunnel → direct HTTP → mock.
     """
+    
+    FALLBACK_MODELS = ["qwen2.5:32b", "llama3.3:70b"]
     
     def __init__(
         self,
-        model: str = "qwen2.5:32b",
+        model: Optional[str] = None,
         timeout: int = 120,
         use_mock: bool = False
     ):
-        self.model = model
+        self.model = model or os.environ.get("OLLAMA_MODEL", "qwen2.5:32b")
         self.timeout = timeout
         self.use_mock = use_mock
-        self._veron_available: Optional[bool] = None
+        self.ollama_base_url = os.environ.get(
+            "VERON_OLLAMA_API", "http://24.11.183.106:11434"
+        )
+        self._transport: Optional[Transport] = None
+        self._resolved_model: Optional[str] = None
     
-    async def check_availability(self) -> bool:
-        """Check if Veron 1 Ollama is available."""
-        if self._veron_available is not None:
-            return self._veron_available
+    async def _detect_transport(self) -> Transport:
+        """Detect the best available transport: SSH → HTTP → mock."""
+        if self._transport is not None:
+            return self._transport
         
+        if self.use_mock:
+            self._transport = Transport.MOCK
+            self._resolved_model = "mock"
+            return self._transport
+        
+        # Try SSH first
         try:
             result = await asyncio.wait_for(
                 asyncio.create_subprocess_exec(
@@ -55,14 +82,56 @@ class OllamaClient:
             stdout, _ = await result.communicate()
             if result.returncode == 0:
                 data = json.loads(stdout.decode())
-                models = [m.get('name', '') for m in data.get('models', [])]
-                self._veron_available = self.model in models
-                return self._veron_available
+                available_models = [m.get('name', '') for m in data.get('models', [])]
+                resolved = self._pick_model(available_models)
+                if resolved:
+                    self._transport = Transport.SSH
+                    self._resolved_model = resolved
+                    logger.info(f"LLM transport: SSH (model: {resolved})")
+                    return self._transport
         except Exception as e:
-            print(f"Veron check failed: {e}")
+            logger.debug(f"SSH transport unavailable: {e}")
         
-        self._veron_available = False
-        return False
+        # Try direct HTTP
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(f"{self.ollama_base_url}/api/tags")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    available_models = [m.get('name', '') for m in data.get('models', [])]
+                    resolved = self._pick_model(available_models)
+                    if resolved:
+                        self._transport = Transport.HTTP
+                        self._resolved_model = resolved
+                        logger.info(f"LLM transport: HTTP → {self.ollama_base_url} (model: {resolved})")
+                        return self._transport
+        except Exception as e:
+            logger.debug(f"HTTP transport unavailable: {e}")
+        
+        # Fall back to mock
+        self._transport = Transport.MOCK
+        self._resolved_model = "mock"
+        logger.warning("LLM transport: MOCK (no Ollama reachable)")
+        return self._transport
+    
+    def _pick_model(self, available: List[str]) -> Optional[str]:
+        """Pick the best available model from preferences."""
+        # Check requested model first
+        if self.model in available:
+            return self.model
+        # Try fallbacks
+        for fallback in self.FALLBACK_MODELS:
+            if fallback in available:
+                return fallback
+        # If models exist at all, use the first one
+        if available:
+            return available[0]
+        return None
+    
+    async def check_availability(self) -> bool:
+        """Check if any real LLM transport is available."""
+        transport = await self._detect_transport()
+        return transport != Transport.MOCK
     
     async def generate(
         self,
@@ -73,77 +142,47 @@ class OllamaClient:
     ) -> LLMResponse:
         """
         Generate text from the LLM.
-        Falls back to mock if Veron is unavailable.
+        Falls back through: SSH → HTTP → mock.
         """
-        # Check if we should use mock
-        if self.use_mock or not await self.check_availability():
+        transport = await self._detect_transport()
+        model = self._resolved_model
+        
+        if transport == Transport.MOCK:
             return await self._mock_generate(prompt, system)
         
-        try:
-            # Build the request
-            request = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                }
+        request = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
             }
-            
-            if system:
-                request["system"] = system
-            
-            # Escape the JSON for shell
-            request_json = json.dumps(request).replace("'", "'\\''")
-            
-            # Execute via SSH
-            cmd = f"curl -s http://localhost:11434/api/generate -d '{request_json}'"
-            
-            proc = await asyncio.create_subprocess_exec(
-                "veron1-ssh",
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=self.timeout
-            )
-            
-            if proc.returncode != 0:
-                return LLMResponse(
-                    text="",
-                    model=self.model,
-                    success=False,
-                    error=f"SSH failed: {stderr.decode()}"
-                )
-            
-            # Parse response
-            response = json.loads(stdout.decode())
-            
-            return LLMResponse(
-                text=response.get("response", ""),
-                model=self.model,
-                success=True,
-                raw_response=response
-            )
-            
-        except asyncio.TimeoutError:
-            return LLMResponse(
-                text="",
-                model=self.model,
-                success=False,
-                error="Request timed out"
-            )
+        }
+        if system:
+            request["system"] = system
+        
+        try:
+            if transport == Transport.SSH:
+                return await self._ssh_request("/api/generate", request, model)
+            else:
+                return await self._http_request("/api/generate", request, model)
         except Exception as e:
-            return LLMResponse(
-                text="",
-                model=self.model,
-                success=False,
-                error=str(e)
-            )
+            # On failure, try the other transport before falling to mock
+            logger.warning(f"{transport.value} request failed ({e}), trying fallback…")
+            self._transport = None  # reset cache to re-detect
+            new_transport = await self._detect_transport()
+            if new_transport != Transport.MOCK and new_transport != transport:
+                try:
+                    if new_transport == Transport.SSH:
+                        return await self._ssh_request("/api/generate", request, model)
+                    else:
+                        return await self._http_request("/api/generate", request, model)
+                except Exception as e2:
+                    logger.warning(f"Fallback {new_transport.value} also failed: {e2}")
+            
+            # Last resort: mock
+            return await self._mock_generate(prompt, system)
     
     async def chat(
         self,
@@ -155,8 +194,10 @@ class OllamaClient:
         Chat completion with message history.
         Messages format: [{"role": "user/assistant/system", "content": "..."}]
         """
-        if self.use_mock or not await self.check_availability():
-            # Extract last user message for mock
+        transport = await self._detect_transport()
+        model = self._resolved_model
+        
+        if transport == Transport.MOCK:
             last_user = next(
                 (m["content"] for m in reversed(messages) if m["role"] == "user"),
                 ""
@@ -167,63 +208,99 @@ class OllamaClient:
             )
             return await self._mock_generate(last_user, system)
         
-        try:
-            request = {
-                "model": self.model,
-                "messages": messages,
-                "stream": False,
-                "options": {
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                }
+        request = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
             }
+        }
+        
+        try:
+            if transport == Transport.SSH:
+                result = await self._ssh_request("/api/chat", request, model)
+            else:
+                result = await self._http_request("/api/chat", request, model)
             
-            request_json = json.dumps(request).replace("'", "'\\''")
-            cmd = f"curl -s http://localhost:11434/api/chat -d '{request_json}'"
+            # Chat endpoint returns message.content instead of response
+            if result.success and result.raw_response:
+                message = result.raw_response.get("message", {})
+                result.text = message.get("content", result.text)
+            return result
             
-            proc = await asyncio.create_subprocess_exec(
-                "veron1-ssh",
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+        except Exception as e:
+            logger.warning(f"{transport.value} chat failed ({e}), trying fallback…")
+            self._transport = None
+            new_transport = await self._detect_transport()
+            if new_transport != Transport.MOCK and new_transport != transport:
+                try:
+                    if new_transport == Transport.SSH:
+                        result = await self._ssh_request("/api/chat", request, model)
+                    else:
+                        result = await self._http_request("/api/chat", request, model)
+                    if result.success and result.raw_response:
+                        message = result.raw_response.get("message", {})
+                        result.text = message.get("content", result.text)
+                    return result
+                except Exception as e2:
+                    logger.warning(f"Fallback {new_transport.value} also failed: {e2}")
+            
+            last_user = next(
+                (m["content"] for m in reversed(messages) if m["role"] == "user"),
+                ""
             )
-            
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=self.timeout
+            system_msg = next(
+                (m["content"] for m in messages if m["role"] == "system"),
+                None
             )
+            return await self._mock_generate(last_user, system_msg)
+    
+    async def _ssh_request(self, endpoint: str, request: Dict, model: str) -> LLMResponse:
+        """Execute Ollama request via SSH tunnel."""
+        request_json = json.dumps(request).replace("'", "'\\''")
+        cmd = f"curl -s http://localhost:11434{endpoint} -d '{request_json}'"
+        
+        proc = await asyncio.create_subprocess_exec(
+            "veron1-ssh",
+            cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(),
+            timeout=self.timeout
+        )
+        
+        if proc.returncode != 0:
+            raise ConnectionError(f"SSH failed: {stderr.decode()}")
+        
+        response = json.loads(stdout.decode())
+        return LLMResponse(
+            text=response.get("response", ""),
+            model=model,
+            success=True,
+            raw_response=response
+        )
+    
+    async def _http_request(self, endpoint: str, request: Dict, model: str) -> LLMResponse:
+        """Execute Ollama request via direct HTTP."""
+        url = f"{self.ollama_base_url}{endpoint}"
+        
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.post(url, json=request)
             
-            if proc.returncode != 0:
-                return LLMResponse(
-                    text="",
-                    model=self.model,
-                    success=False,
-                    error=f"SSH failed: {stderr.decode()}"
-                )
+            if resp.status_code != 200:
+                raise ConnectionError(f"HTTP {resp.status_code}: {resp.text[:200]}")
             
-            response = json.loads(stdout.decode())
-            message = response.get("message", {})
-            
+            response = resp.json()
             return LLMResponse(
-                text=message.get("content", ""),
-                model=self.model,
+                text=response.get("response", ""),
+                model=model,
                 success=True,
                 raw_response=response
-            )
-            
-        except asyncio.TimeoutError:
-            return LLMResponse(
-                text="",
-                model=self.model,
-                success=False,
-                error="Request timed out"
-            )
-        except Exception as e:
-            return LLMResponse(
-                text="",
-                model=self.model,
-                success=False,
-                error=str(e)
             )
     
     async def _mock_generate(
@@ -286,6 +363,10 @@ The apartment is small but clean. Tomorrow he starts at the factory. I'm nervous
                 {"date": "Fall 1968", "event": "John started at the factory", "confidence": "exact"}
             ], indent=2)
         
+        # Interview question mock
+        elif "question" in prompt_lower or "interview" in prompt_lower:
+            mock_response = "That's a wonderful memory. Can you tell me more about what daily life was like during that time? What did a typical day look like for you?"
+        
         # Default mock
         else:
             mock_response = "This is a mock response. The actual content would be generated by the LLM based on the user's recordings and transcripts."
@@ -310,7 +391,14 @@ def get_llm_client(use_mock: bool = False) -> OllamaClient:
     return _client
 
 
-async def test_connection() -> bool:
-    """Test the Ollama connection."""
+async def test_connection() -> Dict[str, Any]:
+    """Test the Ollama connection and report transport info."""
     client = get_llm_client()
-    return await client.check_availability()
+    transport = await client._detect_transport()
+    return {
+        "available": transport != Transport.MOCK,
+        "transport": transport.value,
+        "model": client._resolved_model,
+        "ollama_url": client.ollama_base_url,
+    }
+

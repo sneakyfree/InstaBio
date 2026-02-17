@@ -577,6 +577,12 @@
             } catch (err) {
                 console.error('Failed to load biography:', err);
                 loading.classList.add('hidden');
+                emptyState.innerHTML = `
+                    <h3>💛 We're still working on it</h3>
+                    <p>We're having a little trouble connecting to our writing assistant right now, but don't worry — your recordings are safe and sound.</p>
+                    <p style="margin-top: 12px;">We'll generate your biography as soon as we can!</p>
+                    <a href="/record" class="action-btn" style="margin-top: 16px;">🎙️ Record More Memories</a>
+                `;
                 emptyState.classList.remove('hidden');
             }
         }

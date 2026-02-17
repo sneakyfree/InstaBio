@@ -1076,13 +1076,16 @@ async def get_journal_entry(
 @app.get("/api/llm/status")
 async def get_llm_status():
     """Check LLM (Ollama on Veron) availability."""
-    available = await test_connection()
+    info = await test_connection()
     
     return {
         "success": True,
-        "available": available,
-        "model": "qwen2.5:32b" if available else "mock",
-        "message": "Veron 1 Ollama connected" if available else "Using mock responses (Veron unavailable)"
+        "available": info["available"],
+        "transport": info["transport"],
+        "model": info["model"],
+        "ollama_url": info["ollama_url"],
+        "message": f"LLM connected via {info['transport']} ({info['model']})" if info["available"]
+            else "Using mock responses (no Ollama reachable)"
     }
 
 # ----- Service Worker & Manifest -----

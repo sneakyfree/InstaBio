@@ -1281,7 +1281,10 @@
             }
         }
 
-        async function uploadChunk(blob, index, duration) {
+        const UPLOAD_MAX_RETRIES = 3;
+        const UPLOAD_BASE_DELAY_MS = 2000; // 2s, 4s, 8s
+
+        async function uploadChunk(blob, index, duration, attempt = 0) {
             const formData = new FormData();
             formData.append('audio', blob, `chunk_${index}.webm`);
             formData.append('session_uuid', sessionUUID);
@@ -1294,11 +1297,24 @@
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
                 });
-                if (!response.ok) {
-                    uploadQueue.push({ blob, index, duration });
+                if (response.ok) {
+                    if (attempt > 0) savingStatus.textContent = '✅ Chunk saved successfully!';
+                    return true; // success
                 }
+                throw new Error(`Server returned ${response.status}`);
             } catch (err) {
-                uploadQueue.push({ blob, index, duration });
+                if (attempt < UPLOAD_MAX_RETRIES) {
+                    const delay = UPLOAD_BASE_DELAY_MS * Math.pow(2, attempt);
+                    savingStatus.textContent = `📡 Trying to save… attempt ${attempt + 2} of ${UPLOAD_MAX_RETRIES + 1}`;
+                    console.warn(`Chunk ${index} upload failed (attempt ${attempt + 1}), retrying in ${delay}ms…`, err.message);
+                    await new Promise(r => setTimeout(r, delay));
+                    return uploadChunk(blob, index, duration, attempt + 1);
+                }
+                // All retries exhausted — save to offline queue
+                console.error(`Chunk ${index} upload failed after ${UPLOAD_MAX_RETRIES + 1} attempts. Saving offline.`);
+                savingStatus.textContent = '📱 Saved to your phone — will send when connection is better';
+                uploadQueue.push({ blob, index, duration, retries: 0 });
+                return false;
             }
         }
 
@@ -1556,12 +1572,27 @@
         }
 
         async function processUploadQueue() {
-            while (uploadQueue.length > 0) {
-                const item = uploadQueue.shift();
-                await uploadChunk(item.blob, item.index, item.duration);
+            if (uploadQueue.length === 0) {
+                setTimeout(processUploadQueue, 30000);
+                return;
+            }
+            // Process a snapshot of the queue; don't endlessly re-queue
+            const batch = uploadQueue.splice(0, uploadQueue.length);
+            for (const item of batch) {
+                const success = await uploadChunk(item.blob, item.index, item.duration);
+                if (!success) {
+                    // uploadChunk already pushed it back with retries exhausted;
+                    // don't double-push
+                }
             }
             setTimeout(processUploadQueue, 30000);
         }
+
+        // Flush upload queue immediately when network comes back
+        window.addEventListener('online', () => {
+            savingStatus.textContent = '📶 Back online — sending saved recordings…';
+            processUploadQueue();
+        });
 
         init();
     </script>
