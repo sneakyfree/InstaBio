@@ -7,7 +7,7 @@ Feeds into SadTalker avatar on Veron for video generation.
 import asyncio
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional, Dict, List
 from dataclasses import dataclass, field
 
@@ -196,8 +196,8 @@ async def start_session(user_id: int, user_name: str) -> InterviewSession:
         session_id=session_id,
         user_id=user_id,
         user_name=user_name,
-        started_at=datetime.utcnow(),
-        questions_asked=[{"question": opening, "timestamp": datetime.utcnow().isoformat()}],
+        started_at=datetime.now(UTC),
+        questions_asked=[{"question": opening, "timestamp": datetime.now(UTC).isoformat()}],
     )
     _sessions[session_id] = session
     await _persist_session(session)
@@ -225,7 +225,7 @@ async def next_question(session_id: str, transcript: str) -> str:
     question = await get_next_question(session.user_id, session_id)
     session.questions_asked.append({
         "question": question,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     })
 
     await _persist_session(session)
@@ -240,7 +240,7 @@ async def get_session_status(session_id: str) -> Optional[Dict]:
     if not session:
         return None
 
-    elapsed = (datetime.utcnow() - session.started_at).total_seconds()
+    elapsed = (datetime.now(UTC) - session.started_at).total_seconds()
     current_topic = TOPIC_PROGRESSION[session.current_topic_index] if session.current_topic_index < len(TOPIC_PROGRESSION) else "open"
 
     return {

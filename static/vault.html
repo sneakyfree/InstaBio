@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2D5016">
     <title>Your Life Vault — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
-    
+
     <style>
         /* ===== Variables ===== */
         :root {
@@ -22,13 +23,15 @@
             --spacing: 24px;
             --radius: 16px;
         }
-        
-        *, *::before, *::after {
+
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: var(--font-body);
@@ -38,7 +41,7 @@
             min-height: 100vh;
             padding-bottom: 100px;
         }
-        
+
         /* ===== Header ===== */
         .header {
             background: var(--color-primary);
@@ -48,7 +51,7 @@
             top: 0;
             z-index: 100;
         }
-        
+
         .header-content {
             max-width: 800px;
             margin: 0 auto;
@@ -56,75 +59,75 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .logo {
             font-size: 24px;
             font-weight: 700;
         }
-        
+
         .header-link {
             color: var(--color-white);
             text-decoration: underline;
             font-size: 18px;
             padding: 12px;
         }
-        
+
         /* ===== Container ===== */
         .container {
             max-width: 800px;
             margin: 0 auto;
             padding: var(--spacing);
         }
-        
+
         /* ===== Stats Card ===== */
         .stats-card {
             background: var(--color-white);
             border-radius: var(--radius);
             padding: var(--spacing);
             margin-bottom: var(--spacing);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
-        
+
         .stats-card h2 {
             font-size: 24px;
             color: var(--color-primary);
             margin-bottom: 16px;
         }
-        
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
         }
-        
+
         .stat-item {
             text-align: center;
             padding: 16px;
             background: var(--color-background);
             border-radius: var(--radius);
         }
-        
+
         .stat-value {
             font-size: 32px;
             font-weight: 700;
             color: var(--color-primary);
         }
-        
+
         .stat-label {
             font-size: 16px;
             color: var(--color-text-light);
             margin-top: 4px;
         }
-        
+
         /* ===== Search ===== */
         .search-box {
             background: var(--color-white);
             border-radius: var(--radius);
             padding: 16px;
             margin-bottom: var(--spacing);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
-        
+
         .search-input {
             width: 100%;
             min-height: var(--touch-min);
@@ -134,20 +137,20 @@
             border-radius: var(--radius);
             background: var(--color-background);
         }
-        
+
         .search-input:focus {
             outline: none;
             border-color: var(--color-primary-light);
             box-shadow: 0 0 0 4px rgba(45, 80, 22, 0.2);
         }
-        
+
         /* ===== Tabs ===== */
         .tabs {
             display: flex;
             gap: 8px;
             margin-bottom: var(--spacing);
         }
-        
+
         .tab {
             flex: 1;
             min-height: var(--touch-min);
@@ -162,16 +165,16 @@
             color: var(--color-primary);
             transition: all 0.2s;
         }
-        
+
         .tab.active {
             background: var(--color-primary);
             color: var(--color-white);
         }
-        
+
         .tab:hover:not(.active) {
             background: var(--color-background);
         }
-        
+
         /* ===== Section Title ===== */
         .section-title {
             font-size: 24px;
@@ -181,69 +184,70 @@
             align-items: center;
             gap: 12px;
         }
-        
+
         .section-title span {
             font-size: 28px;
         }
-        
+
         /* ===== Sessions List ===== */
-        .sessions-list, .transcripts-list {
+        .sessions-list,
+        .transcripts-list {
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
-        
+
         .session-card {
             background: var(--color-white);
             border-radius: var(--radius);
             padding: var(--spacing);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             cursor: pointer;
             transition: transform 0.2s;
         }
-        
+
         .session-card:hover {
             transform: translateY(-2px);
         }
-        
+
         .session-date {
             font-size: 16px;
             color: var(--color-text-light);
             margin-bottom: 8px;
         }
-        
+
         .session-duration {
             font-size: 24px;
             font-weight: 700;
             color: var(--color-primary);
         }
-        
+
         .session-chunks {
             font-size: 16px;
             color: var(--color-text-light);
             margin-top: 4px;
         }
-        
+
         /* ===== Transcript Card ===== */
         .transcript-card {
             background: var(--color-white);
             border-radius: var(--radius);
             padding: var(--spacing);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
-        
+
         .transcript-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
-        
+
         .transcript-date {
             font-size: 16px;
             color: var(--color-text-light);
         }
-        
+
         .transcript-lang {
             font-size: 14px;
             background: var(--color-background);
@@ -251,41 +255,41 @@
             border-radius: 20px;
             color: var(--color-primary);
         }
-        
+
         .transcript-text {
             font-size: 20px;
             line-height: 1.6;
             color: var(--color-text);
         }
-        
+
         .transcript-text mark {
             background: #FEFCBF;
             padding: 0 4px;
             border-radius: 4px;
         }
-        
+
         /* ===== Empty State ===== */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
             color: var(--color-text-light);
         }
-        
+
         .empty-icon {
             font-size: 64px;
             margin-bottom: 16px;
         }
-        
+
         .empty-state h3 {
             font-size: 24px;
             color: var(--color-primary);
             margin-bottom: 8px;
         }
-        
+
         .empty-state p {
             font-size: 18px;
         }
-        
+
         /* ===== FAB ===== */
         .fab {
             position: fixed;
@@ -299,25 +303,25 @@
             border: none;
             font-size: 36px;
             cursor: pointer;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: transform 0.2s;
             z-index: 100;
         }
-        
+
         .fab:hover {
             transform: scale(1.1);
         }
-        
+
         /* ===== Loading ===== */
         .loading {
             text-align: center;
             padding: 40px;
             color: var(--color-text-light);
         }
-        
+
         .spinner {
             display: inline-block;
             width: 32px;
@@ -327,36 +331,30 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         /* ===== Accessibility ===== */
         :focus {
             outline: 3px solid var(--color-primary);
             outline-offset: 2px;
         }
-        
+
         .hidden {
             display: none !important;
         }
     </style>
 </head>
+
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="header-content">
-            <a href="/" class="logo" style="text-decoration: none; color: white;">🌿 InstaBio</a>
-            <div style="display: flex; gap: 8px;">
-                <a href="/record" class="header-link" style="text-decoration: none;">Record</a>
-                <a href="/biography" class="header-link" style="text-decoration: none;">Biography</a>
-                <a href="/journal" class="header-link" style="text-decoration: none;">Journal</a>
-                <a href="/progress" class="header-link" style="text-decoration: none;">Progress</a>
-            </div>
-        </div>
-    </div>
-    
+    <!-- Shared navigation -->
+    <script src="/static/shared.js"></script>
+    <script>renderNav('vault');</script>
+
     <div class="container">
         <!-- Stats Card -->
         <div id="stats-card" class="stats-card">
@@ -380,18 +378,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Search -->
         <div class="search-box">
-            <input 
-                type="search" 
-                id="search-input" 
-                class="search-input" 
-                placeholder="🔍 Search your memories..."
-                autocomplete="off"
-            >
+            <input type="search" id="search-input" class="search-input" placeholder="🔍 Search your memories..."
+                autocomplete="off">
         </div>
-        
+
         <!-- Tabs -->
         <div class="tabs">
             <button id="tab-sessions" class="tab active" data-tab="sessions">
@@ -401,7 +394,7 @@
                 📝 Transcripts
             </button>
         </div>
-        
+
         <!-- Sessions View -->
         <div id="sessions-view">
             <h2 class="section-title"><span>📁</span> Recording Sessions</h2>
@@ -412,7 +405,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Transcripts View -->
         <div id="transcripts-view" class="hidden">
             <h2 class="section-title"><span>📝</span> Your Words</h2>
@@ -424,24 +417,19 @@
             </div>
         </div>
     </div>
-    
+
     <!-- FAB - Record More -->
     <a href="/record" class="fab" aria-label="Record more">
         🎙️
     </a>
-    
-    <script src="/static/shared.js"></script>
+
     <script>
         // ===== InstaBio Life Vault =====
-        
+
         const API_URL = '/api';
         const token = localStorage.getItem('instabio_token');
         const userName = localStorage.getItem('instabio_name');
-        
-        if (!token) {
-            window.location.href = '/onboard';
-        }
-        
+
         // DOM Elements
         const userNameSpan = document.getElementById('user-name');
         const totalTimeSpan = document.getElementById('total-time');
@@ -455,21 +443,21 @@
         const transcriptsList = document.getElementById('transcripts-list');
         const tabSessions = document.getElementById('tab-sessions');
         const tabTranscripts = document.getElementById('tab-transcripts');
-        
+
         // Set username
         if (userName) {
             userNameSpan.textContent = userName;
         }
-        
+
         // ===== API Functions =====
-        
+
         async function loadStats() {
             try {
                 const response = await fetch(`${API_URL}/user/stats`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     userNameSpan.textContent = data.first_name || userName;
                     totalTimeSpan.textContent = data.total_duration_formatted || '0:00';
@@ -481,14 +469,14 @@
                 console.error('Failed to load stats:', err);
             }
         }
-        
+
         async function loadSessions() {
             try {
                 const response = await fetch(`${API_URL}/sessions`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
+
                 if (data.success && data.sessions.length > 0) {
                     sessionsList.innerHTML = data.sessions.map(session => `
                         <div class="session-card" data-uuid="${session.session_uuid}">
@@ -517,34 +505,35 @@
                 sessionsList.innerHTML = '<p class="loading">Failed to load sessions</p>';
             }
         }
-        
+
         async function loadTranscripts(searchQuery = '') {
             try {
                 let url = `${API_URL}/transcripts`;
                 if (searchQuery) {
                     url += `?search=${encodeURIComponent(searchQuery)}`;
                 }
-                
+
                 const response = await fetch(url, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
+
                 if (data.success && data.transcripts.length > 0) {
                     transcriptsList.innerHTML = data.transcripts.map(transcript => {
-                        let text = transcript.text;
+                        let text = escapeHtml(transcript.text);
                         if (searchQuery) {
                             const regex = new RegExp(`(${escapeRegex(searchQuery)})`, 'gi');
                             text = text.replace(regex, '<mark>$1</mark>');
                         }
-                        
+                        const lang = transcript.language ? escapeHtml(transcript.language).toUpperCase() : '';
+
                         return `
                             <div class="transcript-card">
                                 <div class="transcript-header">
                                     <span class="transcript-date">
                                         ${formatDate(transcript.created_at)}
                                     </span>
-                                    ${transcript.language ? `<span class="transcript-lang">${transcript.language.toUpperCase()}</span>` : ''}
+                                    ${lang ? `<span class="transcript-lang">${lang}</span>` : ''}
                                 </div>
                                 <div class="transcript-text">
                                     ${text}
@@ -566,9 +555,9 @@
                 transcriptsList.innerHTML = '<p class="loading">Failed to load transcripts</p>';
             }
         }
-        
+
         // ===== Helpers =====
-        
+
         function formatDate(dateStr) {
             const date = new Date(dateStr);
             return date.toLocaleDateString('en-US', {
@@ -580,12 +569,12 @@
                 minute: '2-digit'
             });
         }
-        
+
         function formatDuration(seconds) {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             const secs = Math.floor(seconds % 60);
-            
+
             if (hours > 0) {
                 return `${hours}h ${minutes}m ${secs}s`;
             } else if (minutes > 0) {
@@ -594,20 +583,20 @@
                 return `${secs}s`;
             }
         }
-        
+
         function escapeRegex(string) {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
-        
+
         // ===== Tab Switching =====
-        
+
         tabSessions.addEventListener('click', () => {
             tabSessions.classList.add('active');
             tabTranscripts.classList.remove('active');
             sessionsView.classList.remove('hidden');
             transcriptsView.classList.add('hidden');
         });
-        
+
         tabTranscripts.addEventListener('click', () => {
             tabTranscripts.classList.add('active');
             tabSessions.classList.remove('active');
@@ -615,27 +604,27 @@
             sessionsView.classList.add('hidden');
             loadTranscripts(searchInput.value);
         });
-        
+
         // ===== Search =====
-        
+
         let searchTimeout = null;
-        
+
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const query = searchInput.value.trim();
-                
+
                 // Switch to transcripts view for search
                 if (query) {
                     tabTranscripts.click();
                 }
-                
+
                 loadTranscripts(query);
             }, 300);
         });
-        
+
         // ===== Initialize =====
-        
+
         async function init() {
             await Promise.all([
                 loadStats(),
@@ -643,8 +632,9 @@
                 loadTranscripts()
             ]);
         }
-        
+
         init();
     </script>
 </body>
+
 </html>

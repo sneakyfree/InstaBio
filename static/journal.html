@@ -374,19 +374,9 @@
 </head>
 
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-content">
-            <a href="/" class="nav-logo">🌿 InstaBio</a>
-            <div class="nav-links">
-                <a href="/record" class="nav-link">Record</a>
-                <a href="/vault" class="nav-link">Vault</a>
-                <a href="/biography" class="nav-link">Biography</a>
-                <a href="/journal" class="nav-link active">Journal</a>
-                <a href="/progress" class="nav-link">Progress</a>
-            </div>
-        </div>
-    </nav>
+    <!-- Shared navigation -->
+    <script src="/static/shared.js"></script>
+    <script>renderNav('journal');</script>
 
     <div class="container">
         <!-- Journal Header -->
@@ -425,14 +415,9 @@
         </div>
     </div>
 
-    <script src="/static/shared.js"></script>
     <script>
         const API_URL = '/api';
         const token = localStorage.getItem('instabio_token');
-
-        if (!token) {
-            window.location.href = '/onboard';
-        }
 
         const loading = document.getElementById('loading');
         const emptyState = document.getElementById('empty-state');

@@ -7,7 +7,7 @@ import json
 import re
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 
 from .llm_client import get_llm_client, OllamaClient
@@ -310,7 +310,7 @@ class JournalGenerator:
         return JournalCollection(
             entries=entries,
             author_name=user_name,
-            generated_at=datetime.utcnow().isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             total_entries=len(entries),
             date_range_start=entries[0].date if entries else None,
             date_range_end=entries[-1].date if entries else None

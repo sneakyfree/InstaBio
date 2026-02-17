@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2D5016">
     <title>Your Progress — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
-    
+
     <style>
         :root {
             --color-primary: #2D5016;
@@ -25,13 +26,15 @@
             --spacing: 24px;
             --radius: 16px;
         }
-        
-        *, *::before, *::after {
+
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: var(--font-body);
@@ -40,7 +43,7 @@
             background: var(--color-background);
             min-height: 100vh;
         }
-        
+
         /* Navigation */
         .nav {
             background: var(--color-primary);
@@ -49,7 +52,7 @@
             top: 0;
             z-index: 100;
         }
-        
+
         .nav-content {
             max-width: 1200px;
             margin: 0 auto;
@@ -59,20 +62,20 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        
+
         .nav-logo {
             color: var(--color-white);
             font-size: 24px;
             font-weight: 700;
             text-decoration: none;
         }
-        
+
         .nav-links {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
         }
-        
+
         .nav-link {
             color: var(--color-white);
             text-decoration: none;
@@ -81,67 +84,68 @@
             font-size: 16px;
             transition: background 0.2s;
         }
-        
-        .nav-link:hover, .nav-link.active {
-            background: rgba(255,255,255,0.2);
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
         }
-        
+
         /* Container */
         .container {
             max-width: 900px;
             margin: 0 auto;
             padding: var(--spacing);
         }
-        
+
         /* Header */
         .page-header {
             text-align: center;
             margin-bottom: 40px;
         }
-        
+
         .page-header h1 {
             font-size: 36px;
             color: var(--color-primary);
             margin-bottom: 8px;
         }
-        
+
         .page-header p {
             color: var(--color-text-light);
             font-size: 18px;
         }
-        
+
         /* Recording Stats */
         .recording-stats {
             background: var(--color-white);
             border-radius: var(--radius);
             padding: 32px;
             margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
-        
+
         .stats-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
         }
-        
+
         .stats-header h2 {
             font-size: 24px;
             color: var(--color-primary);
         }
-        
+
         .big-number {
             font-size: 48px;
             font-weight: 700;
             color: var(--color-primary);
         }
-        
+
         .big-label {
             font-size: 16px;
             color: var(--color-text-light);
         }
-        
+
         /* Milestones */
         .milestones {
             display: grid;
@@ -149,7 +153,7 @@
             gap: 16px;
             margin-top: 24px;
         }
-        
+
         .milestone {
             background: var(--color-cream);
             border-radius: 12px;
@@ -158,34 +162,34 @@
             position: relative;
             border: 2px solid transparent;
         }
-        
+
         .milestone.completed {
             border-color: var(--color-success);
             background: rgba(5, 150, 105, 0.1);
         }
-        
+
         .milestone.current {
             border-color: var(--color-warning);
             background: rgba(217, 119, 6, 0.1);
         }
-        
+
         .milestone-icon {
             font-size: 32px;
             margin-bottom: 8px;
         }
-        
+
         .milestone-time {
             font-size: 18px;
             font-weight: 600;
             color: var(--color-primary);
         }
-        
+
         .milestone-label {
             font-size: 14px;
             color: var(--color-text-light);
             margin-top: 4px;
         }
-        
+
         .milestone-check {
             position: absolute;
             top: -8px;
@@ -200,7 +204,7 @@
             justify-content: center;
             font-size: 14px;
         }
-        
+
         /* Product Cards */
         .products-grid {
             display: grid;
@@ -208,36 +212,36 @@
             gap: 24px;
             margin-bottom: 24px;
         }
-        
+
         .product-card {
             background: var(--color-white);
             border-radius: var(--radius);
             padding: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
-        
+
         .product-header {
             display: flex;
             align-items: center;
             gap: 16px;
             margin-bottom: 16px;
         }
-        
+
         .product-icon {
             font-size: 40px;
         }
-        
+
         .product-title {
             font-size: 20px;
             font-weight: 600;
             color: var(--color-primary);
         }
-        
+
         .product-status {
             font-size: 14px;
             color: var(--color-text-light);
         }
-        
+
         /* Progress Bar */
         .progress-bar {
             height: 12px;
@@ -246,25 +250,36 @@
             overflow: hidden;
             margin: 16px 0;
         }
-        
+
         .progress-fill {
             height: 100%;
             border-radius: 6px;
             transition: width 0.5s ease;
         }
-        
-        .progress-fill.success { background: var(--color-success); }
-        .progress-fill.warning { background: var(--color-warning); }
-        .progress-fill.info { background: var(--color-info); }
-        .progress-fill.primary { background: var(--color-primary); }
-        
+
+        .progress-fill.success {
+            background: var(--color-success);
+        }
+
+        .progress-fill.warning {
+            background: var(--color-warning);
+        }
+
+        .progress-fill.info {
+            background: var(--color-info);
+        }
+
+        .progress-fill.primary {
+            background: var(--color-primary);
+        }
+
         .progress-label {
             display: flex;
             justify-content: space-between;
             font-size: 14px;
             color: var(--color-text-light);
         }
-        
+
         /* Status Badges */
         .status-badge {
             display: inline-block;
@@ -273,12 +288,27 @@
             font-size: 14px;
             font-weight: 500;
         }
-        
-        .status-badge.ready { background: rgba(5, 150, 105, 0.2); color: #059669; }
-        .status-badge.processing { background: rgba(217, 119, 6, 0.2); color: #D97706; }
-        .status-badge.locked { background: rgba(107, 114, 128, 0.2); color: #6B7280; }
-        .status-badge.available { background: rgba(37, 99, 235, 0.2); color: #2563EB; }
-        
+
+        .status-badge.ready {
+            background: rgba(5, 150, 105, 0.2);
+            color: #059669;
+        }
+
+        .status-badge.processing {
+            background: rgba(217, 119, 6, 0.2);
+            color: #D97706;
+        }
+
+        .status-badge.locked {
+            background: rgba(107, 114, 128, 0.2);
+            color: #6B7280;
+        }
+
+        .status-badge.available {
+            background: rgba(37, 99, 235, 0.2);
+            color: #2563EB;
+        }
+
         /* Action Button */
         .action-btn {
             display: inline-block;
@@ -295,20 +325,20 @@
             text-align: center;
             margin-top: 12px;
         }
-        
+
         .action-btn:hover {
             background: var(--color-primary-light);
         }
-        
+
         .action-btn.secondary {
             background: var(--color-text-light);
         }
-        
+
         .action-btn:disabled {
             background: #D1D5DB;
             cursor: not-allowed;
         }
-        
+
         /* Processing Status */
         .processing-card {
             background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
@@ -318,31 +348,31 @@
             margin-bottom: 24px;
             text-align: center;
         }
-        
+
         .processing-card h2 {
             margin-bottom: 16px;
         }
-        
+
         .processing-stage {
             font-size: 18px;
             opacity: 0.9;
             margin-bottom: 16px;
         }
-        
+
         .processing-bar {
             height: 8px;
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.3);
             border-radius: 4px;
             overflow: hidden;
             margin-bottom: 8px;
         }
-        
+
         .processing-bar .fill {
             height: 100%;
             background: var(--color-white);
             transition: width 0.3s;
         }
-        
+
         /* Encouragement */
         .encouragement {
             background: var(--color-white);
@@ -352,68 +382,62 @@
             margin-top: 24px;
             border: 2px dashed var(--color-primary);
         }
-        
+
         .encouragement h3 {
             color: var(--color-primary);
             margin-bottom: 8px;
         }
-        
+
         .encouragement p {
             color: var(--color-text-light);
             font-size: 16px;
         }
-        
+
         /* Mobile */
         @media (max-width: 768px) {
             .milestones {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
+
             .products-grid {
                 grid-template-columns: 1fr;
             }
         }
-        
-        .hidden { display: none !important; }
-        
+
+        .hidden {
+            display: none !important;
+        }
+
         /* Spinner */
         .spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid rgba(255,255,255,0.3);
+            border: 3px solid rgba(255, 255, 255, 0.3);
             border-top-color: white;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 16px;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
+
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-content">
-            <a href="/" class="nav-logo">🌿 InstaBio</a>
-            <div class="nav-links">
-                <a href="/record" class="nav-link">Record</a>
-                <a href="/vault" class="nav-link">Vault</a>
-                <a href="/biography" class="nav-link">Biography</a>
-                <a href="/journal" class="nav-link">Journal</a>
-                <a href="/progress" class="nav-link active">Progress</a>
-            </div>
-        </div>
-    </nav>
-    
+    <script src="/static/shared.js"></script>
+    <script>renderNav('progress');</script>
+
     <div class="container">
         <!-- Header -->
         <header class="page-header">
             <h1>📊 Your Progress</h1>
             <p>Watch your legacy grow</p>
         </header>
-        
+
         <!-- Processing Status (shown when processing) -->
         <div class="processing-card hidden" id="processing-status">
             <div class="spinner"></div>
@@ -424,7 +448,7 @@
             </div>
             <p id="processing-percent">0%</p>
         </div>
-        
+
         <!-- Recording Stats -->
         <div class="recording-stats">
             <div class="stats-header">
@@ -434,7 +458,7 @@
                     <div class="big-label">hours recorded</div>
                 </div>
             </div>
-            
+
             <div class="milestones">
                 <div class="milestone" id="milestone-1h">
                     <div class="milestone-icon">📖</div>
@@ -463,7 +487,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Products Grid -->
         <div class="products-grid">
             <!-- Biography -->
@@ -484,7 +508,7 @@
                 </div>
                 <a href="/biography" class="action-btn" id="bio-btn">View Biography</a>
             </div>
-            
+
             <!-- Journal -->
             <div class="product-card">
                 <div class="product-header">
@@ -503,7 +527,7 @@
                 </div>
                 <a href="/journal" class="action-btn secondary" id="journal-btn">View Journal</a>
             </div>
-            
+
             <!-- Voice Clone -->
             <div class="product-card">
                 <div class="product-header">
@@ -522,7 +546,7 @@
                 </div>
                 <button class="action-btn secondary" disabled>Coming Soon</button>
             </div>
-            
+
             <!-- Avatar -->
             <div class="product-card">
                 <div class="product-header">
@@ -541,7 +565,7 @@
                 </div>
                 <button class="action-btn secondary" disabled>Coming Soon</button>
             </div>
-            
+
             <!-- Soul -->
             <div class="product-card">
                 <div class="product-header">
@@ -561,7 +585,7 @@
                 <button class="action-btn secondary" disabled>Coming Soon</button>
             </div>
         </div>
-        
+
         <!-- Process Button -->
         <div style="text-align: center; margin: 32px 0;">
             <button class="action-btn" id="process-btn" onclick="startProcessing()" style="max-width: 300px;">
@@ -571,25 +595,21 @@
                 Generate your biography and journal from recordings
             </p>
         </div>
-        
+
         <!-- Encouragement -->
         <div class="encouragement" id="encouragement">
             <h3>💪 Keep Going!</h3>
             <p id="encouragement-text">Every story you share brings your legacy closer to completion.</p>
         </div>
     </div>
-    
+
     <script>
         const API_URL = '/api';
         const token = localStorage.getItem('instabio_token');
-        
-        if (!token) {
-            window.location.href = '/onboard';
-        }
-        
+
         let totalSeconds = 0;
         let processingInterval = null;
-        
+
         async function loadProgress() {
             try {
                 // Load user stats
@@ -597,45 +617,45 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const stats = await statsRes.json();
-                
+
                 if (stats.success) {
                     totalSeconds = stats.total_duration_seconds || 0;
                     updateRecordingStats(stats);
                 }
-                
+
                 // Load processing status
                 const progressRes = await fetch(`${API_URL}/progress`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const progress = await progressRes.json();
-                
+
                 updateProcessingStatus(progress);
-                
+
                 // Load biography status
                 const bioRes = await fetch(`${API_URL}/biography`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const bio = await bioRes.json();
-                
+
                 updateBiographyStatus(bio);
-                
+
                 // Load journal status
                 const journalRes = await fetch(`${API_URL}/journal`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const journal = await journalRes.json();
-                
+
                 updateJournalStatus(journal);
-                
+
             } catch (err) {
                 console.error('Failed to load progress:', err);
             }
         }
-        
+
         function updateRecordingStats(stats) {
             const hours = stats.total_duration_seconds / 3600;
             document.getElementById('total-time').textContent = formatHours(hours);
-            
+
             // Update milestones
             const milestones = [
                 { id: 'milestone-1h', hours: 1 },
@@ -644,9 +664,9 @@
                 { id: 'milestone-20h', hours: 20 },
                 { id: 'milestone-50h', hours: 50 }
             ];
-            
+
             let currentMilestone = null;
-            
+
             milestones.forEach(m => {
                 const el = document.getElementById(m.id);
                 if (hours >= m.hours) {
@@ -657,19 +677,19 @@
                     currentMilestone = m;
                 }
             });
-            
+
             // Update product progress based on recording hours
             updateProductProgress(hours);
-            
+
             // Update encouragement
             updateEncouragement(hours);
         }
-        
+
         function updateProductProgress(hours) {
             // Voice clone progress (needs 2h for basic, 10h for good, 20h for premium)
             const voiceProgress = Math.min((hours / 20) * 100, 100);
             document.getElementById('voice-progress').style.width = `${voiceProgress}%`;
-            
+
             if (hours >= 20) {
                 document.getElementById('voice-quality').textContent = 'Premium tier';
                 document.getElementById('voice-badge').className = 'status-badge ready';
@@ -688,11 +708,11 @@
             } else {
                 document.getElementById('voice-status-text').textContent = `${Math.round(2 - hours)}h more needed`;
             }
-            
+
             // Avatar progress
             const avatarProgress = Math.min((hours / 20) * 100, 100);
             document.getElementById('avatar-progress').style.width = `${avatarProgress}%`;
-            
+
             if (hours >= 20) {
                 document.getElementById('avatar-tier').textContent = 'High-fidelity';
                 document.getElementById('avatar-badge').className = 'status-badge ready';
@@ -706,11 +726,11 @@
             } else {
                 document.getElementById('avatar-status-text').textContent = `${Math.round(10 - hours)}h more needed`;
             }
-            
+
             // Soul progress
             const soulProgress = Math.min((hours / 50) * 100, 100);
             document.getElementById('soul-progress').style.width = `${soulProgress}%`;
-            
+
             if (hours >= 50) {
                 document.getElementById('soul-status').textContent = 'Complete';
                 document.getElementById('soul-badge').className = 'status-badge ready';
@@ -725,24 +745,24 @@
                 document.getElementById('soul-status-text').textContent = `${Math.round(20 - hours)}h more needed`;
             }
         }
-        
+
         function updateProcessingStatus(progress) {
             const processingCard = document.getElementById('processing-status');
             const processBtn = document.getElementById('process-btn');
             const processHint = document.getElementById('process-hint');
-            
+
             if (progress.status === 'processing') {
                 processingCard.classList.remove('hidden');
                 processBtn.disabled = true;
                 processBtn.textContent = 'Processing...';
-                
-                document.getElementById('processing-stage').textContent = 
+
+                document.getElementById('processing-stage').textContent =
                     formatStage(progress.stage);
-                document.getElementById('processing-fill').style.width = 
+                document.getElementById('processing-fill').style.width =
                     `${progress.progress || 0}%`;
-                document.getElementById('processing-percent').textContent = 
+                document.getElementById('processing-percent').textContent =
                     `${progress.progress || 0}%`;
-                
+
                 // Poll for updates
                 if (!processingInterval) {
                     processingInterval = setInterval(loadProgress, 3000);
@@ -751,41 +771,41 @@
                 processingCard.classList.add('hidden');
                 processBtn.disabled = false;
                 processBtn.textContent = '✨ Process My Stories';
-                
+
                 if (processingInterval) {
                     clearInterval(processingInterval);
                     processingInterval = null;
                 }
-                
+
                 if (progress.status === 'complete') {
-                    processHint.textContent = 'Last processed: ' + 
+                    processHint.textContent = 'Last processed: ' +
                         new Date(progress.completed_at).toLocaleDateString();
                 }
             }
         }
-        
+
         function updateBiographyStatus(data) {
             if (data.success && data.biography) {
                 const chapters = data.biography.chapters || [];
-                document.getElementById('bio-chapters').textContent = 
+                document.getElementById('bio-chapters').textContent =
                     `${chapters.length} chapters`;
                 document.getElementById('bio-progress').style.width = '100%';
                 document.getElementById('bio-badge').className = 'status-badge ready';
                 document.getElementById('bio-badge').textContent = 'Ready';
                 document.getElementById('bio-status-text').textContent = 'Your story is ready!';
             } else if (data.status === 'processing') {
-                document.getElementById('bio-progress').style.width = 
+                document.getElementById('bio-progress').style.width =
                     `${data.progress || 0}%`;
                 document.getElementById('bio-badge').className = 'status-badge processing';
                 document.getElementById('bio-badge').textContent = 'Processing';
                 document.getElementById('bio-status-text').textContent = 'Creating your story...';
             }
         }
-        
+
         function updateJournalStatus(data) {
             if (data.success && data.journal && data.journal.entries) {
                 const entries = data.journal.entries.length;
-                document.getElementById('journal-entries').textContent = 
+                document.getElementById('journal-entries').textContent =
                     `${entries} entries`;
                 document.getElementById('journal-progress').style.width = '100%';
                 document.getElementById('journal-badge').className = 'status-badge ready';
@@ -793,7 +813,7 @@
                 document.getElementById('journal-status-text').textContent = 'Your journal is ready!';
             }
         }
-        
+
         function updateEncouragement(hours) {
             const messages = [
                 { min: 0, msg: "Start recording to build your legacy!" },
@@ -805,22 +825,22 @@
                 { min: 20, msg: "You're building something truly special." },
                 { min: 50, msg: "You've created a complete legacy. Incredible!" }
             ];
-            
+
             let message = messages[0].msg;
             for (const m of messages) {
                 if (hours >= m.min) message = m.msg;
             }
-            
+
             document.getElementById('encouragement-text').textContent = message;
         }
-        
+
         function formatHours(hours) {
             if (hours < 1) {
                 return `${Math.round(hours * 60)}m`;
             }
             return `${hours.toFixed(1)}h`;
         }
-        
+
         function formatStage(stage) {
             const stages = {
                 'starting': '🚀 Starting up...',
@@ -833,20 +853,20 @@
             };
             return stages[stage] || stage;
         }
-        
+
         async function startProcessing() {
             try {
                 const btn = document.getElementById('process-btn');
                 btn.disabled = true;
                 btn.textContent = 'Starting...';
-                
+
                 const response = await fetch(`${API_URL}/process`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     loadProgress();
                 } else {
@@ -854,15 +874,16 @@
                     btn.disabled = false;
                     btn.textContent = '✨ Process My Stories';
                 }
-                
+
             } catch (err) {
                 console.error('Failed to start processing:', err);
                 alert('Failed to start processing. Please try again.');
             }
         }
-        
+
         // Initialize
         loadProgress();
     </script>
 </body>
+
 </html>

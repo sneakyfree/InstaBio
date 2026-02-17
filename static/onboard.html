@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#2D5016">
     <title>Start Your Story — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
-    
+
     <style>
         /* ===== Variables ===== */
         :root {
@@ -24,13 +25,15 @@
             --spacing: 24px;
             --radius: 16px;
         }
-        
-        *, *::before, *::after {
+
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: var(--font-body);
@@ -40,41 +43,41 @@
             min-height: 100vh;
             padding: var(--spacing);
         }
-        
+
         .container {
             max-width: 500px;
             margin: 0 auto;
             padding-top: 24px;
         }
-        
+
         /* ===== Header ===== */
         .header {
             text-align: center;
             margin-bottom: 40px;
         }
-        
+
         .logo {
             font-size: 28px;
             font-weight: 700;
             color: var(--color-primary);
         }
-        
+
         .header h1 {
             font-size: var(--font-header);
             color: var(--color-primary);
             margin-top: 24px;
         }
-        
+
         .header p {
             color: var(--color-text-light);
             margin-top: 8px;
         }
-        
+
         /* ===== Form ===== */
         .form-group {
             margin-bottom: 28px;
         }
-        
+
         label {
             display: block;
             font-size: 22px;
@@ -82,7 +85,7 @@
             color: var(--color-text);
             margin-bottom: 12px;
         }
-        
+
         input {
             width: 100%;
             min-height: var(--touch-min);
@@ -95,28 +98,28 @@
             -webkit-appearance: none;
             appearance: none;
         }
-        
+
         input:focus {
             outline: none;
             border-color: var(--color-primary-light);
             box-shadow: 0 0 0 4px rgba(45, 80, 22, 0.2);
         }
-        
+
         input::placeholder {
             color: #999;
         }
-        
+
         /* Year input */
         input[type="number"] {
             -moz-appearance: textfield;
         }
-        
+
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
-        
+
         /* ===== Button ===== */
         .btn {
             display: block;
@@ -133,17 +136,17 @@
             transition: background 0.2s;
             margin-top: 32px;
         }
-        
+
         .btn:hover,
         .btn:focus {
             background: var(--color-primary-light);
         }
-        
+
         .btn:disabled {
             background: #999;
             cursor: not-allowed;
         }
-        
+
         /* ===== Messages ===== */
         .error {
             background: #FEE2E2;
@@ -153,7 +156,7 @@
             margin-bottom: 24px;
             font-size: 18px;
         }
-        
+
         .success {
             background: #D1FAE5;
             color: var(--color-primary);
@@ -162,14 +165,14 @@
             margin-bottom: 24px;
             font-size: 18px;
         }
-        
+
         /* ===== Hint Text ===== */
         .hint {
             font-size: 16px;
             color: var(--color-text-light);
             margin-top: 8px;
         }
-        
+
         /* ===== Progress ===== */
         .progress {
             display: flex;
@@ -177,57 +180,58 @@
             gap: 12px;
             margin-bottom: 32px;
         }
-        
+
         .progress-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
             background: #CCC;
         }
-        
+
         .progress-dot.active {
             background: var(--color-primary);
         }
-        
+
         /* ===== Welcome Screen ===== */
         .welcome {
             text-align: center;
             padding: 40px 20px;
         }
-        
+
         .welcome h1 {
             font-size: 32px;
             color: var(--color-primary);
             margin-bottom: 16px;
         }
-        
+
         .welcome p {
             font-size: 22px;
             color: var(--color-text-light);
             margin-bottom: 32px;
         }
-        
+
         .welcome-icon {
             font-size: 64px;
             margin-bottom: 24px;
         }
-        
+
         /* ===== Hidden ===== */
         .hidden {
             display: none !important;
         }
-        
+
         /* ===== Focus styles ===== */
         :focus {
             outline: 3px solid var(--color-primary);
             outline-offset: 2px;
         }
-        
+
         button:focus {
             outline-offset: 4px;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Form Screen -->
@@ -235,66 +239,53 @@
             <div class="header">
                 <div class="logo">🌿 InstaBio</div>
                 <h1>Let's get started</h1>
-                <p>Just three quick things:</p>
+                <p>Just a few quick things:</p>
             </div>
-            
+
             <div class="progress">
                 <span class="progress-dot active"></span>
                 <span class="progress-dot"></span>
                 <span class="progress-dot"></span>
+                <span class="progress-dot"></span>
             </div>
-            
+
             <div id="error-message" class="error hidden"></div>
-            
+
             <form id="onboard-form">
                 <div class="form-group">
                     <label for="first_name">What's your first name?</label>
-                    <input 
-                        type="text" 
-                        id="first_name" 
-                        name="first_name" 
-                        placeholder="Your first name"
-                        autocomplete="given-name"
-                        required
-                        minlength="1"
-                        maxlength="50"
-                    >
+                    <input type="text" id="first_name" name="first_name" placeholder="Your first name"
+                        autocomplete="given-name" required minlength="1" maxlength="50">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="birth_year">What year were you born?</label>
-                    <input 
-                        type="number" 
-                        id="birth_year" 
-                        name="birth_year" 
-                        placeholder="1950"
-                        autocomplete="bday-year"
-                        required
-                        min="1900"
-                        max="2020"
-                    >
+                    <input type="number" id="birth_year" name="birth_year" placeholder="1950" autocomplete="bday-year"
+                        required min="1900" max="2020">
                     <p class="hint">This helps us organize your life story</p>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="email">Your email</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        placeholder="you@example.com"
-                        autocomplete="email"
-                        required
-                    >
+                    <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email"
+                        required>
                     <p class="hint">So we can save your story safely</p>
                 </div>
-                
+
+                <div class="form-group">
+                    <label for="pin">Choose a 4-digit PIN</label>
+                    <input type="password" id="pin" name="pin" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"
+                        minlength="4" maxlength="4" autocomplete="new-password" required
+                        style="text-align: center; letter-spacing: 12px; font-size: 32px;">
+                    <p class="hint">To keep your story private</p>
+                </div>
+
                 <button type="submit" class="btn" id="submit-btn">
                     Continue →
                 </button>
             </form>
         </div>
-        
+
         <!-- Welcome Screen (shown after registration) -->
         <div id="welcome-screen" class="hidden">
             <div class="welcome">
@@ -308,12 +299,12 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         // ===== InstaBio Onboarding =====
-        
+
         const API_URL = '/api';
-        
+
         // DOM Elements
         const formScreen = document.getElementById('form-screen');
         const welcomeScreen = document.getElementById('welcome-screen');
@@ -322,11 +313,11 @@
         const submitBtn = document.getElementById('submit-btn');
         const startRecordingBtn = document.getElementById('start-recording-btn');
         const userNameSpan = document.getElementById('user-name');
-        
+
         // Check if already logged in
         const existingToken = localStorage.getItem('instabio_token');
         const existingName = localStorage.getItem('instabio_name');
-        
+
         if (existingToken && existingName) {
             // Already logged in - show welcome or go to record
             const urlParams = new URLSearchParams(window.location.search);
@@ -335,38 +326,44 @@
                 window.location.href = '/record';
             }
         }
-        
+
         // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             // Clear error
             errorMessage.classList.add('hidden');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Please wait...';
-            
+
             const formData = {
                 first_name: document.getElementById('first_name').value.trim(),
                 birth_year: parseInt(document.getElementById('birth_year').value),
-                email: document.getElementById('email').value.trim().toLowerCase()
+                email: document.getElementById('email').value.trim().toLowerCase(),
+                pin: document.getElementById('pin').value.trim()
             };
-            
+
             // Validation
             if (!formData.first_name) {
                 showError('Please enter your first name');
                 return;
             }
-            
+
             if (isNaN(formData.birth_year) || formData.birth_year < 1900 || formData.birth_year > 2020) {
                 showError('Please enter a valid birth year');
                 return;
             }
-            
+
             if (!formData.email || !formData.email.includes('@')) {
                 showError('Please enter a valid email address');
                 return;
             }
-            
+
+            if (!formData.pin || formData.pin.length !== 4 || !/^\d{4}$/.test(formData.pin)) {
+                showError('Please enter a 4-digit PIN');
+                return;
+            }
+
             try {
                 const response = await fetch(`${API_URL}/register`, {
                     method: 'POST',
@@ -375,33 +372,33 @@
                     },
                     body: JSON.stringify(formData)
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (!response.ok) {
                     throw new Error(data.detail || 'Registration failed');
                 }
-                
+
                 // Save to localStorage
                 localStorage.setItem('instabio_token', data.token);
                 localStorage.setItem('instabio_name', data.first_name);
                 localStorage.setItem('instabio_user_id', data.user_id);
-                
+
                 // Show welcome screen
                 userNameSpan.textContent = data.first_name;
                 formScreen.classList.add('hidden');
                 welcomeScreen.classList.remove('hidden');
-                
+
             } catch (err) {
                 showError(err.message || 'Something went wrong. Please try again.');
             }
         });
-        
+
         // Start recording button
         startRecordingBtn.addEventListener('click', () => {
             window.location.href = '/record';
         });
-        
+
         // Show error
         function showError(message) {
             errorMessage.textContent = message;
@@ -409,11 +406,11 @@
             submitBtn.disabled = false;
             submitBtn.textContent = 'Continue →';
         }
-        
+
         // Update progress dots as user fills form
         const inputs = form.querySelectorAll('input');
         const progressDots = document.querySelectorAll('.progress-dot');
-        
+
         inputs.forEach((input, index) => {
             input.addEventListener('input', () => {
                 if (input.value.trim()) {
@@ -425,4 +422,5 @@
         });
     </script>
 </body>
+
 </html>

@@ -15,6 +15,7 @@ from pathlib import Path
 from datetime import datetime, UTC
 from typing import Optional
 from contextlib import asynccontextmanager
+import aiosqlite
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
@@ -129,6 +130,7 @@ class RegisterRequest(BaseModel):
     first_name: str
     birth_year: int
     email: EmailStr
+    pin: Optional[str] = None  # B2: optional 4-digit PIN
 
 class RegisterResponse(BaseModel):
     success: bool
@@ -173,6 +175,8 @@ async def get_current_user(authorization: str = Header(None)) -> dict:
     if token_created:
         try:
             created = datetime.fromisoformat(token_created)
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=UTC)
             from datetime import timedelta
             if datetime.now(UTC) - created > timedelta(days=TOKEN_EXPIRY_DAYS):
                 raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
@@ -238,14 +242,44 @@ async def register(data: RegisterRequest, request: Request):
     """
     logger.info(f"Registration attempt for email: {data.email}")
     
+    # Hash PIN if provided (B2)
+    import hashlib
+    pin_hash = ''
+    if data.pin and len(data.pin) == 4 and data.pin.isdigit():
+        pin_hash = hashlib.sha256(data.pin.encode()).hexdigest()
+    
     # Check if email already exists
     existing = await db.get_user_by_email(data.email)
     if existing:
-        # For MVP, just return existing user's token
-        # In production, send magic link email
+        # B2: Verify PIN if the account has one
+        stored_pin = existing.get('pin_hash', '') or ''
+        if stored_pin and pin_hash:
+            # Both have PIN — verify
+            if stored_pin != pin_hash:
+                raise HTTPException(
+                    status_code=401,
+                    detail="That PIN doesn't match. Please try again."
+                )
+        elif stored_pin and not pin_hash:
+            # Account has PIN but user didn't provide one
+            raise HTTPException(
+                status_code=401,
+                detail="Please enter your 4-digit PIN to sign in."
+            )
+        # If no stored PIN, allow through (legacy user)
+        
+        # Rotate token on re-login
+        new_token = secrets.token_urlsafe(32)
+        async with aiosqlite.connect(db.DB_PATH) as conn:
+            await conn.execute(
+                "UPDATE users SET session_token = ?, token_created_at = ? WHERE id = ?",
+                (new_token, datetime.now(UTC).isoformat(), existing['id'])
+            )
+            await conn.commit()
+        
         return RegisterResponse(
             success=True,
-            token=existing['session_token'],
+            token=new_token,
             user_id=existing['id'],
             first_name=existing['first_name'],
             message="Welcome back! We found your account."
@@ -260,10 +294,11 @@ async def register(data: RegisterRequest, request: Request):
             first_name=data.first_name,
             birth_year=data.birth_year,
             email=data.email,
-            session_token=token
+            session_token=token,
+            pin_hash=pin_hash
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Registration failed: {str(e)}")
+        raise HTTPException(status_code=400, detail="Something didn't work. Let's try again.")
     
     return RegisterResponse(
         success=True,

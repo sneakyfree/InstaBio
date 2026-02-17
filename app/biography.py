@@ -322,7 +322,7 @@ class BiographyGenerator:
         """
         Generate a complete biography with all chapters.
         """
-        from datetime import datetime
+        from datetime import datetime, UTC
         
         # Plan chapters
         chapter_plans = await self.plan_chapters(extraction, timeline)
@@ -350,7 +350,7 @@ class BiographyGenerator:
             author_name=user_name,
             chapters=chapters,
             style=style,
-            generated_at=datetime.utcnow().isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             status="complete" if len(chapters) > 1 else "partial"
         )
     

@@ -4,8 +4,9 @@ SQLite database for users, sessions, and transcripts
 """
 
 import aiosqlite
+import json
 import os
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 
 # Database path — configurable via env for test isolation
@@ -62,6 +63,8 @@ async def init_db():
                 duration_seconds REAL,
                 uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 transcription_status TEXT DEFAULT 'pending',
+                retry_count INTEGER DEFAULT 0,
+                last_error TEXT,
                 FOREIGN KEY (session_id) REFERENCES recording_sessions(id)
             )
         """)
@@ -102,9 +105,25 @@ async def init_db():
             ON transcripts(session_id)
         """)
         
+        # Safe migration — add retry_count to audio_chunks if missing
+        try:
+            await db.execute("ALTER TABLE audio_chunks ADD COLUMN retry_count INTEGER DEFAULT 0")
+        except Exception:
+            pass
+        try:
+            await db.execute("ALTER TABLE audio_chunks ADD COLUMN last_error TEXT")
+        except Exception:
+            pass
+        
         # Safe migration — add token_created_at if missing (for existing DBs)
         try:
             await db.execute("ALTER TABLE users ADD COLUMN token_created_at TEXT DEFAULT ''")
+        except Exception:
+            pass  # Column already exists
+        
+        # Safe migration — add pin_hash column (B2: PIN auth)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN pin_hash TEXT DEFAULT ''")
         except Exception:
             pass  # Column already exists
         
@@ -135,18 +154,31 @@ async def init_db():
             )
         """)
         
+        # Cache results table (G10: persist pipeline output caches)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS cache_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                cache_key TEXT NOT NULL,
+                data_json TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, cache_key),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        
         await db.commit()
         print("✅ Database initialized successfully")
 
-async def create_user(first_name: str, birth_year: int, email: str, session_token: str) -> int:
+async def create_user(first_name: str, birth_year: int, email: str, session_token: str, pin_hash: str = '') -> int:
     """Create a new user and return their ID."""
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
             """
-            INSERT INTO users (first_name, birth_year, email, session_token, token_created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (first_name, birth_year, email, session_token, token_created_at, pin_hash)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (first_name, birth_year, email.lower(), session_token, datetime.utcnow().isoformat())
+            (first_name, birth_year, email.lower(), session_token, datetime.now(UTC).isoformat(), pin_hash)
         )
         await db.commit()
         return cursor.lastrowid
@@ -285,8 +317,8 @@ async def get_user_transcripts(user_id: int, search_query: str = None) -> list:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
-async def get_pending_chunks() -> list:
-    """Get audio chunks pending transcription."""
+async def get_pending_chunks(max_retries: int = 3) -> list:
+    """Get audio chunks pending transcription, skipping those with too many retries."""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
@@ -295,8 +327,10 @@ async def get_pending_chunks() -> list:
             FROM audio_chunks ac
             JOIN recording_sessions rs ON ac.session_id = rs.id
             WHERE ac.transcription_status = 'pending'
+              AND COALESCE(ac.retry_count, 0) < ?
             ORDER BY ac.uploaded_at ASC
-            """
+            """,
+            (max_retries,)
         )
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
@@ -313,11 +347,20 @@ async def get_session_by_uuid(session_uuid: str) -> dict | None:
         return dict(row) if row else None
 
 async def mark_chunk_failed(chunk_id: int, error_msg: str) -> None:
-    """Mark a chunk as failed transcription."""
+    """Increment retry count; mark as permanently 'failed' after 3 retries."""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "UPDATE audio_chunks SET transcription_status = 'failed' WHERE id = ?",
-            (chunk_id,)
+            """
+            UPDATE audio_chunks 
+            SET retry_count = COALESCE(retry_count, 0) + 1,
+                last_error = ?,
+                transcription_status = CASE 
+                    WHEN COALESCE(retry_count, 0) + 1 >= 3 THEN 'failed'
+                    ELSE 'pending'
+                END
+            WHERE id = ?
+            """,
+            (error_msg, chunk_id)
         )
         await db.commit()
 
@@ -333,7 +376,7 @@ async def save_interview_session(session_id: str, user_id: int, data: str) -> No
             VALUES (?, ?, ?, ?)
             ON CONFLICT(session_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
             """,
-            (session_id, user_id, data, datetime.utcnow().isoformat())
+            (session_id, user_id, data, datetime.now(UTC).isoformat())
         )
         await db.commit()
 
@@ -390,3 +433,30 @@ async def get_processing_status(user_id: int) -> dict | None:
         )
         row = await cursor.fetchone()
         return dict(row) if row else None
+
+async def save_cache_result(user_id: int, cache_key: str, data: dict) -> None:
+    """Save or update a cached pipeline result (G10)."""
+    async with aiosqlite.connect(DB_PATH) as conn:
+        await conn.execute(
+            """
+            INSERT INTO cache_results (user_id, cache_key, data_json, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id, cache_key) DO UPDATE SET
+                data_json = excluded.data_json,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (user_id, cache_key, json.dumps(data))
+        )
+        await conn.commit()
+
+async def get_cache_result(user_id: int, cache_key: str) -> dict | None:
+    """Retrieve a cached pipeline result (G10)."""
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = await conn.execute(
+            "SELECT data_json FROM cache_results WHERE user_id = ? AND cache_key = ?",
+            (user_id, cache_key)
+        )
+        row = await cursor.fetchone()
+        if row:
+            return json.loads(row[0])
+        return None
