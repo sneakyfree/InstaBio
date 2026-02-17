@@ -390,6 +390,382 @@ async def build_timeline(
     return timeline
 
 
+def extract_entities(text: str) -> Dict[str, list]:
+    """
+    Lightweight regex-based entity extraction.
+    Works without LLM — useful as a fallback or quick scan.
+    """
+    # Person names: 2-4 consecutive capitalized words
+    names = list(set(re.findall(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b', text)))
+
+    # Years: 4-digit numbers 1900-2026
+    years = list(set(re.findall(r'\b(19\d{2}|20[0-2]\d)\b', text)))
+
+    # Places: City, State patterns or known US states
+    places = list(set(re.findall(
+        r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*(?:Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming))\b',
+        text
+    )))
+
+    # Life events: sentences with key life milestones
+    event_keywords = r'\b(born|married|graduated|moved|died|retired|started|founded|enlisted|promoted|transferred|divorced|widowed|immigrated|emigrated)\b'
+    sentences = re.split(r'[.!?]', text)
+    events = [s.strip() for s in sentences if re.search(event_keywords, s, re.IGNORECASE) and len(s.strip()) > 10]
+
+    return {"names": names[:20], "years": sorted(years), "places": places[:10], "events": events[:10]}
+
+
+# ---------------------------------------------------------------------------
+# Pure-regex, fully-offline entity extraction (no LLM required)
+# ---------------------------------------------------------------------------
+
+# Common English stop-words / false-positive names to skip
+_STOP_NAMES = {
+    "I", "He", "She", "It", "We", "They", "The", "This", "That", "These",
+    "Those", "My", "His", "Her", "Our", "Your", "Its", "Mr", "Mrs", "Ms",
+    "But", "And", "Then", "Well", "Yes", "Yeah", "No", "So", "Oh", "Now",
+    "Just", "Like", "There", "Here", "What", "When", "Where", "Who", "How",
+    "About", "After", "Before", "During", "Would", "Could", "Should",
+    "Also", "Very", "Really", "Maybe", "Actually", "Probably", "Because",
+    "Still", "Even", "Back", "Over", "Some", "Every", "However", "Although",
+    "Never", "Always", "Sometimes", "Once", "First", "Last", "Next", "Only",
+    "Many", "Much", "Most", "Other", "Another", "Each", "Both", "Few",
+    "Several", "Such", "Same", "One", "Two", "Three", "Four", "Five",
+    "Six", "Seven", "Eight", "Nine", "Ten", "Anyway", "Anyhow", "Indeed",
+    "Perhaps", "Certainly", "Definitely", "Absolutely", "Basically",
+    "Essentially", "Obviously", "Literally", "Quite", "Rather", "Enough",
+    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+    "Saturday", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+    "Spring", "Summer", "Fall", "Autumn", "Winter", "Christmas", "Easter",
+    "Thanksgiving", "Halloween", "New",
+}
+
+# US state abbreviations and full names (for place detection)
+_US_STATES = {
+    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+    "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
+    "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+    "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+    "New Hampshire", "New Jersey", "New Mexico", "New York",
+    "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon",
+    "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+    "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+    "West Virginia", "Wisconsin", "Wyoming",
+}
+
+# Relationship keywords that often precede or follow a person's name
+_RELATIONSHIP_WORDS = {
+    "mother", "mom", "mama", "father", "dad", "papa", "brother", "sister",
+    "son", "daughter", "husband", "wife", "uncle", "aunt", "cousin",
+    "grandfather", "grandpa", "grandmother", "grandma", "nephew", "niece",
+    "friend", "neighbor", "neighbour", "boss", "teacher", "coach",
+    "pastor", "doctor", "nurse", "partner",
+}
+
+# Place-type keyword hints
+_PLACE_KEYWORDS = {
+    "street", "avenue", "road", "boulevard", "lane", "drive", "court",
+    "circle", "highway", "square", "bridge", "park", "lake", "river",
+    "mountain", "hill", "valley", "island", "beach", "county", "city",
+    "town", "village",
+}
+
+# Event-type keyword mapping
+_EVENT_PATTERNS: List[tuple] = [
+    ("birth",     re.compile(r"\b(?:born|birth)\b", re.I)),
+    ("death",     re.compile(r"\b(?:died|passed away|funeral|death|passed on)\b", re.I)),
+    ("marriage",  re.compile(r"\b(?:married|wedding|engaged|engagement|wed)\b", re.I)),
+    ("move",      re.compile(r"\b(?:moved to|relocated|moved from|moved back)\b", re.I)),
+    ("job",       re.compile(r"\b(?:hired|fired|retired|started working|got a job|new job|promoted|promotion|worked at|worked for)\b", re.I)),
+    ("education", re.compile(r"\b(?:graduated|enrolled|school|college|university|diploma|degree|studied)\b", re.I)),
+    ("military",  re.compile(r"\b(?:enlisted|deployed|served|military|army|navy|marines|air force|drafted|discharge)\b", re.I)),
+]
+
+# ---- Compiled patterns ----
+_RE_CAPITALIZED_NAME = re.compile(
+    r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b"
+)
+_RE_RELATIONSHIP_BEFORE = re.compile(
+    r"\b(?:my|his|her|our)\s+(" + "|".join(_RELATIONSHIP_WORDS) + r")\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b",
+    re.I,
+)
+_RE_RELATIONSHIP_AFTER = re.compile(
+    r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}),?\s+(?:my|his|her|our)\s+(" + "|".join(_RELATIONSHIP_WORDS) + r")\b",
+    re.I,
+)
+_RE_YEAR = re.compile(r"\b(1[89]\d{2}|20[0-2]\d)\b")
+_RE_DECADE = re.compile(r"\b(?:the\s+)?((?:early|mid|late)\s+)?(\d{4})s\b", re.I)
+_RE_FULL_DATE = re.compile(
+    r"\b((?:January|February|March|April|May|June|July|August|September|October|November|December)"
+    r"\s+\d{1,2},?\s+\d{4})\b",
+    re.I,
+)
+_RE_MONTH_YEAR = re.compile(
+    r"\b((?:January|February|March|April|May|June|July|August|September|October|November|December)"
+    r"\s+\d{4})\b",
+    re.I,
+)
+_RE_SEASON_YEAR = re.compile(
+    r"\b((?:spring|summer|fall|autumn|winter)\s+(?:of\s+)?\d{4})\b", re.I
+)
+_RE_PLACE_WITH_STATE = re.compile(
+    r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}),\s*([A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b"
+)
+_RE_STREET_ADDRESS = re.compile(
+    r"\b(\d+\s+[A-Z][a-z]+(?:\s+[A-Z]?[a-z]+)*\s+(?:" + "|".join(_PLACE_KEYWORDS) + r"))\b",
+    re.I,
+)
+
+# State abbreviation set for quick lookup
+_STATE_ABBREVS = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+    "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+    "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+    "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+    "DC",
+}
+
+
+def _sentence_around(text: str, match_start: int, match_end: int, radius: int = 120) -> str:
+    """Return a snippet of text surrounding a regex match."""
+    start = max(0, match_start - radius)
+    end = min(len(text), match_end + radius)
+    snippet = text[start:end].strip()
+    if start > 0:
+        snippet = "…" + snippet
+    if end < len(text):
+        snippet = snippet + "…"
+    return snippet
+
+
+def extract_entities(
+    transcript: str,
+    session_id: Optional[str] = None,
+) -> ExtractionResult:
+    """
+    Extract people, places, dates, and events from *transcript* using only
+    regex heuristics.  Pure Python, no LLM, fully offline.
+
+    Returns an ``ExtractionResult`` identical in shape to what
+    ``EntityExtractor.extract()`` produces, so callers can swap freely.
+    """
+    if not transcript or len(transcript.strip()) < 10:
+        return ExtractionResult(
+            people=[], places=[], dates=[], events=[],
+            success=True, source_session=session_id,
+        )
+
+    # ---- People ----
+    people_map: Dict[str, Person] = {}
+
+    # Pattern 1: "my <relationship> <Name>"
+    for m in _RE_RELATIONSHIP_BEFORE.finditer(transcript):
+        rel, name = m.group(1).strip(), m.group(2).strip()
+        key = name.lower()
+        if name.split()[0] in _STOP_NAMES:
+            continue
+        if key not in people_map:
+            people_map[key] = Person(
+                name=name,
+                relationship=rel.lower(),
+                context=_sentence_around(transcript, m.start(), m.end()),
+                confidence=ConfidenceLevel.EXACT,
+            )
+        else:
+            people_map[key].mentions += 1
+            if not people_map[key].relationship:
+                people_map[key].relationship = rel.lower()
+
+    # Pattern 2: "<Name>, my <relationship>"
+    for m in _RE_RELATIONSHIP_AFTER.finditer(transcript):
+        name, rel = m.group(1).strip(), m.group(2).strip()
+        key = name.lower()
+        if name.split()[0] in _STOP_NAMES:
+            continue
+        if key not in people_map:
+            people_map[key] = Person(
+                name=name,
+                relationship=rel.lower(),
+                context=_sentence_around(transcript, m.start(), m.end()),
+                confidence=ConfidenceLevel.EXACT,
+            )
+        else:
+            people_map[key].mentions += 1
+
+    # Pattern 3: Capitalized multi-word names (≥2 words → likely a person)
+    for m in _RE_CAPITALIZED_NAME.finditer(transcript):
+        name = m.group(1).strip()
+        words = name.split()
+        if len(words) < 2:
+            continue  # single capitalised word is too noisy
+        if any(w in _STOP_NAMES for w in words):
+            continue
+        key = name.lower()
+        if key in people_map:
+            people_map[key].mentions += 1
+        else:
+            people_map[key] = Person(
+                name=name,
+                context=_sentence_around(transcript, m.start(), m.end()),
+                confidence=ConfidenceLevel.APPROXIMATE,
+            )
+
+    # ---- Places ----
+    places_map: Dict[str, Place] = {}
+
+    # Pattern 1: "City, ST" or "City, State"
+    for m in _RE_PLACE_WITH_STATE.finditer(transcript):
+        city, state = m.group(1).strip(), m.group(2).strip()
+        if state in _STATE_ABBREVS or state in _US_STATES:
+            full = f"{city}, {state}"
+            key = full.lower()
+            if key not in places_map:
+                places_map[key] = Place(
+                    name=full,
+                    place_type="city",
+                    context=_sentence_around(transcript, m.start(), m.end()),
+                    confidence=ConfidenceLevel.EXACT,
+                )
+
+    # Pattern 2: Street addresses ("123 Main Street")
+    for m in _RE_STREET_ADDRESS.finditer(transcript):
+        addr = m.group(1).strip()
+        key = addr.lower()
+        if key not in places_map:
+            places_map[key] = Place(
+                name=addr,
+                place_type="address",
+                context=_sentence_around(transcript, m.start(), m.end()),
+                confidence=ConfidenceLevel.EXACT,
+            )
+
+    # Pattern 3: US state full names appearing standalone
+    for state in _US_STATES:
+        if state in transcript:
+            key = state.lower()
+            if key not in places_map:
+                idx = transcript.index(state)
+                places_map[key] = Place(
+                    name=state,
+                    place_type="state",
+                    context=_sentence_around(transcript, idx, idx + len(state)),
+                    confidence=ConfidenceLevel.EXACT,
+                )
+
+    # ---- Dates ----
+    dates_list: List[DateMention] = []
+    seen_dates: set = set()
+
+    # Full dates: "March 15, 1968"
+    for m in _RE_FULL_DATE.finditer(transcript):
+        raw = m.group(1).strip()
+        if raw not in seen_dates:
+            seen_dates.add(raw)
+            dates_list.append(DateMention(
+                date=raw, date_type="day",
+                confidence=ConfidenceLevel.EXACT,
+            ))
+
+    # Month + Year: "June 1955"
+    for m in _RE_MONTH_YEAR.finditer(transcript):
+        raw = m.group(1).strip()
+        if raw not in seen_dates:
+            seen_dates.add(raw)
+            dates_list.append(DateMention(
+                date=raw, date_type="month",
+                confidence=ConfidenceLevel.EXACT,
+            ))
+
+    # Season + Year: "summer of 1972"
+    for m in _RE_SEASON_YEAR.finditer(transcript):
+        raw = m.group(1).strip()
+        if raw not in seen_dates:
+            seen_dates.add(raw)
+            dates_list.append(DateMention(
+                date=raw, date_type="season",
+                confidence=ConfidenceLevel.APPROXIMATE,
+            ))
+
+    # Decades: "the late 1960s"
+    for m in _RE_DECADE.finditer(transcript):
+        qualifier = (m.group(1) or "").strip()
+        decade = m.group(2)
+        raw = f"{qualifier} {decade}s".strip()
+        if raw not in seen_dates:
+            seen_dates.add(raw)
+            dates_list.append(DateMention(
+                date=raw, date_type="approximate",
+                confidence=ConfidenceLevel.APPROXIMATE,
+            ))
+
+    # Standalone years: "1968"
+    for m in _RE_YEAR.finditer(transcript):
+        raw = m.group(1)
+        if raw not in seen_dates:
+            seen_dates.add(raw)
+            dates_list.append(DateMention(
+                date=raw, date_type="year",
+                confidence=ConfidenceLevel.EXACT,
+            ))
+
+    # ---- Events ----
+    events_list: List[Event] = []
+    seen_events: set = set()
+
+    for event_type, pattern in _EVENT_PATTERNS:
+        for m in pattern.finditer(transcript):
+            snippet = _sentence_around(transcript, m.start(), m.end(), radius=200)
+            evt_key = (event_type, snippet[:80])
+            if evt_key in seen_events:
+                continue
+            seen_events.add(evt_key)
+
+            # Try to find a year near the keyword
+            nearby_text = transcript[max(0, m.start() - 100): min(len(transcript), m.end() + 100)]
+            year_match = _RE_YEAR.search(nearby_text)
+            date_str = year_match.group(1) if year_match else None
+
+            # Collect nearby people / places
+            nearby_people = [
+                p.name for p in people_map.values()
+                if p.name.lower() in nearby_text.lower()
+            ]
+            nearby_places = [
+                p.name for p in places_map.values()
+                if p.name.lower() in nearby_text.lower()
+            ]
+
+            events_list.append(Event(
+                event_type=event_type,
+                description=snippet.strip(),
+                date=date_str,
+                date_confidence=(
+                    ConfidenceLevel.EXACT if date_str else ConfidenceLevel.INFERRED
+                ),
+                people_involved=nearby_people,
+                places_involved=nearby_places,
+                source_text=m.group(0),
+            ))
+
+    # Remove any "people" that were also detected as places (city names etc.)
+    place_name_keys = {k for k in places_map}
+    people_cleaned = {
+        k: v for k, v in people_map.items() if k not in place_name_keys
+    }
+
+    return ExtractionResult(
+        people=list(people_cleaned.values()),
+        places=list(places_map.values()),
+        dates=dates_list,
+        events=events_list,
+        success=True,
+        source_session=session_id,
+    )
+
+
 # Singleton extractor
 _extractor: Optional[EntityExtractor] = None
 
