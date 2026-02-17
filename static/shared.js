@@ -113,6 +113,17 @@ function renderNav(activePage) {
     `;
 
     document.body.insertBefore(nav, document.body.firstChild);
+
+    // Auto-detect active page from URL pathname
+    const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+    nav.querySelectorAll('.nav-link').forEach(link => {
+        const linkPath = new URL(link.href).pathname.replace(/\/+$/, '') || '/';
+        if (linkPath === currentPath) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
 }
 
 /**

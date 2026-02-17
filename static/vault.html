@@ -506,25 +506,16 @@
             }
         }
 
-        async function loadTranscripts(searchQuery = '') {
+        async function loadTranscripts() {
             try {
-                let url = `${API_URL}/transcripts`;
-                if (searchQuery) {
-                    url += `?search=${encodeURIComponent(searchQuery)}`;
-                }
-
-                const response = await fetch(url, {
+                const response = await fetch(`${API_URL}/transcripts`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
 
                 if (data.success && data.transcripts.length > 0) {
                     transcriptsList.innerHTML = data.transcripts.map(transcript => {
-                        let text = escapeHtml(transcript.text);
-                        if (searchQuery) {
-                            const regex = new RegExp(`(${escapeRegex(searchQuery)})`, 'gi');
-                            text = text.replace(regex, '<mark>$1</mark>');
-                        }
+                        const text = escapeHtml(transcript.text);
                         const lang = transcript.language ? escapeHtml(transcript.language).toUpperCase() : '';
 
                         return `
@@ -545,8 +536,8 @@
                     transcriptsList.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-icon">📝</div>
-                            <h3>${searchQuery ? 'No matches found' : 'No transcripts yet'}</h3>
-                            <p>${searchQuery ? 'Try a different search term.' : 'Your words will appear here after recording.'}</p>
+                            <h3>No transcripts yet</h3>
+                            <p>Your words will appear here after recording.</p>
                         </div>
                     `;
                 }
@@ -602,25 +593,24 @@
             tabSessions.classList.remove('active');
             transcriptsView.classList.remove('hidden');
             sessionsView.classList.add('hidden');
-            loadTranscripts(searchInput.value);
         });
 
-        // ===== Search =====
-
-        let searchTimeout = null;
+        // ===== Client-Side Search =====
 
         searchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const query = searchInput.value.trim();
+            const query = searchInput.value.trim().toLowerCase();
 
-                // Switch to transcripts view for search
-                if (query) {
-                    tabTranscripts.click();
-                }
+            // Filter transcript cards
+            transcriptsList.querySelectorAll('.transcript-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.classList.toggle('hidden', query && !text.includes(query));
+            });
 
-                loadTranscripts(query);
-            }, 300);
+            // Filter session cards
+            sessionsList.querySelectorAll('.session-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.classList.toggle('hidden', query && !text.includes(query));
+            });
         });
 
         // ===== Initialize =====
