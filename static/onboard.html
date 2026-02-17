@@ -246,7 +246,6 @@
                 <span class="progress-dot active"></span>
                 <span class="progress-dot"></span>
                 <span class="progress-dot"></span>
-                <span class="progress-dot"></span>
             </div>
 
             <div id="error-message" class="error hidden"></div>
@@ -270,14 +269,6 @@
                     <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email"
                         required>
                     <p class="hint">So we can save your story safely</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="pin">Choose a 4-digit PIN</label>
-                    <input type="password" id="pin" name="pin" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"
-                        minlength="4" maxlength="4" autocomplete="new-password" required
-                        style="text-align: center; letter-spacing: 12px; font-size: 32px;">
-                    <p class="hint">To keep your story private</p>
                 </div>
 
                 <button type="submit" class="btn" id="submit-btn">
@@ -339,8 +330,7 @@
             const formData = {
                 first_name: document.getElementById('first_name').value.trim(),
                 birth_year: parseInt(document.getElementById('birth_year').value),
-                email: document.getElementById('email').value.trim().toLowerCase(),
-                pin: document.getElementById('pin').value.trim()
+                email: document.getElementById('email').value.trim().toLowerCase()
             };
 
             // Validation
@@ -356,11 +346,6 @@
 
             if (!formData.email || !formData.email.includes('@')) {
                 showError('Please enter a valid email address');
-                return;
-            }
-
-            if (!formData.pin || formData.pin.length !== 4 || !/^\d{4}$/.test(formData.pin)) {
-                showError('Please enter a 4-digit PIN');
                 return;
             }
 
