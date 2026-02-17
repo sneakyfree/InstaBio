@@ -268,6 +268,25 @@
             border-radius: 4px;
         }
 
+        /* ===== Delete Button ===== */
+        .delete-btn {
+            background: none;
+            border: 2px solid #c53030;
+            color: #c53030;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 12px;
+            min-height: var(--touch-min);
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #c53030;
+            color: var(--color-white);
+        }
+
         /* ===== Empty State ===== */
         .empty-state {
             text-align: center;
@@ -489,6 +508,7 @@
                             <div class="session-chunks">
                                 ${session.chunk_count} segments • ${session.status}
                             </div>
+                            <button class="delete-btn" onclick="deleteSession(${session.id}, event)">🗑️ Delete Session</button>
                         </div>
                     `).join('');
                 } else {
@@ -529,6 +549,7 @@
                                 <div class="transcript-text">
                                     ${text}
                                 </div>
+                                <button class="delete-btn" onclick="deleteTranscript(${transcript.id}, event)">🗑️ Delete Transcript</button>
                             </div>
                         `;
                     }).join('');
@@ -577,6 +598,50 @@
 
         function escapeRegex(string) {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // ===== Delete Functions =====
+
+        async function deleteSession(sessionId, event) {
+            event.stopPropagation();
+            if (!confirm('Delete this recording? This cannot be undone.')) return;
+            try {
+                const response = await fetch(`${API_URL}/session/${sessionId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await loadSessions();
+                    await loadStats();
+                } else {
+                    alert(data.detail || 'Failed to delete session.');
+                }
+            } catch (err) {
+                console.error('Delete session error:', err);
+                alert('Something went wrong. Please try again.');
+            }
+        }
+
+        async function deleteTranscript(transcriptId, event) {
+            event.stopPropagation();
+            if (!confirm('Delete this recording? This cannot be undone.')) return;
+            try {
+                const response = await fetch(`${API_URL}/transcript/${transcriptId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await loadTranscripts();
+                    await loadStats();
+                } else {
+                    alert(data.detail || 'Failed to delete transcript.');
+                }
+            } catch (err) {
+                console.error('Delete transcript error:', err);
+                alert('Something went wrong. Please try again.');
+            }
         }
 
         // ===== Tab Switching =====

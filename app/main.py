@@ -6,6 +6,7 @@ Your story. Forever.
 """
 
 import os
+import hashlib
 import html as html_mod
 import uuid
 import secrets
@@ -16,6 +17,7 @@ from datetime import datetime, UTC
 from typing import Optional
 from contextlib import asynccontextmanager
 import aiosqlite
+import bcrypt
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
@@ -242,25 +244,45 @@ async def register(data: RegisterRequest, request: Request):
     """
     logger.info(f"Registration attempt for email: {data.email}")
     
-    # Hash PIN if provided (B2)
-    import hashlib
+    # Hash PIN if provided (B2) — uses bcrypt for secure hashing
     pin_hash = ''
     if data.pin and len(data.pin) == 4 and data.pin.isdigit():
-        pin_hash = hashlib.sha256(data.pin.encode()).hexdigest()
+        pin_hash = bcrypt.hashpw(data.pin.encode(), bcrypt.gensalt()).decode()
     
     # Check if email already exists
     existing = await db.get_user_by_email(data.email)
     if existing:
         # B2: Verify PIN if the account has one
         stored_pin = existing.get('pin_hash', '') or ''
-        if stored_pin and pin_hash:
-            # Both have PIN — verify
-            if stored_pin != pin_hash:
+        if stored_pin and data.pin:
+            # Both have PIN — verify with bcrypt (+ SHA-256 migration)
+            pin_ok = False
+            try:
+                pin_ok = bcrypt.checkpw(data.pin.encode(), stored_pin.encode())
+            except (ValueError, TypeError):
+                pass  # Not a valid bcrypt hash — try SHA-256 fallback
+            
+            if not pin_ok:
+                # Migration: check against legacy SHA-256 hash
+                legacy_hash = hashlib.sha256(data.pin.encode()).hexdigest()
+                if stored_pin == legacy_hash:
+                    pin_ok = True
+                    # Re-hash with bcrypt and update DB
+                    new_hash = bcrypt.hashpw(data.pin.encode(), bcrypt.gensalt()).decode()
+                    async with aiosqlite.connect(db.DB_PATH) as conn:
+                        await conn.execute(
+                            "UPDATE users SET pin_hash = ? WHERE id = ?",
+                            (new_hash, existing['id'])
+                        )
+                        await conn.commit()
+                    logger.info(f"Migrated PIN hash to bcrypt for user {existing['id']}")
+            
+            if not pin_ok:
                 raise HTTPException(
                     status_code=401,
                     detail="That PIN doesn't match. Please try again."
                 )
-        elif stored_pin and not pin_hash:
+        elif stored_pin and not data.pin:
             # Account has PIN but user didn't provide one
             raise HTTPException(
                 status_code=401,
@@ -1167,6 +1189,28 @@ async def api_interview_status(session_id: str, authorization: str = Header(None
     if not status:
         raise HTTPException(status_code=404, detail="Interview session not found")
     return {"success": True, **status}
+
+
+# ----- Delete Endpoints -----
+
+@app.delete("/api/session/{session_id}")
+async def delete_session(session_id: int, authorization: str = Header(None)):
+    """Delete a recording session and all its chunks/transcripts."""
+    user = await get_current_user(authorization)
+    deleted = await db.delete_recording_session(session_id, user['id'])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found or not yours")
+    return {"success": True, "message": "Session deleted."}
+
+
+@app.delete("/api/transcript/{transcript_id}")
+async def delete_transcript(transcript_id: int, authorization: str = Header(None)):
+    """Delete a single transcript."""
+    user = await get_current_user(authorization)
+    deleted = await db.delete_transcript(transcript_id, user['id'])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Transcript not found or not yours")
+    return {"success": True, "message": "Transcript deleted."}
 
 
 # ----- Error Handlers -----

@@ -401,6 +401,42 @@ async def delete_interview_session(session_id: str) -> None:
         await db.commit()
 
 
+# ----- Recording / Transcript Deletion -----
+
+async def delete_recording_session(session_id: int, user_id: int) -> bool:
+    """Delete a recording session and its chunks/transcripts. Returns True if deleted."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Verify ownership
+        cursor = await db.execute(
+            "SELECT id FROM recording_sessions WHERE id = ? AND user_id = ?",
+            (session_id, user_id)
+        )
+        if not await cursor.fetchone():
+            return False
+        # Delete transcripts linked to this session
+        await db.execute("DELETE FROM transcripts WHERE session_id = ?", (session_id,))
+        # Delete audio chunks
+        await db.execute("DELETE FROM audio_chunks WHERE session_id = ?", (session_id,))
+        # Delete the session itself
+        await db.execute("DELETE FROM recording_sessions WHERE id = ?", (session_id,))
+        await db.commit()
+        return True
+
+
+async def delete_transcript(transcript_id: int, user_id: int) -> bool:
+    """Delete a single transcript. Returns True if deleted."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT id FROM transcripts WHERE id = ? AND user_id = ?",
+            (transcript_id, user_id)
+        )
+        if not await cursor.fetchone():
+            return False
+        await db.execute("DELETE FROM transcripts WHERE id = ?", (transcript_id,))
+        await db.commit()
+        return True
+
+
 # ----- Processing Status Persistence (B4) -----
 
 async def upsert_processing_status(user_id: int, status: str, stage: str = '', progress: int = 0,
