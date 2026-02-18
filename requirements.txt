@@ -24,7 +24,6 @@ slowapi==0.1.9
 bcrypt==5.0.0  # PIN hashing
 
 # Utilities
-python-jose[cryptography]==3.5.0  # JWT tokens
 pydantic==2.12.5  # Data validation
 email-validator==2.3.0  # Email validation for pydantic
 

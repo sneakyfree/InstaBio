@@ -53,6 +53,7 @@ limiter = Limiter(key_func=get_remote_address)
 # ----- Configuration -----
 BASE_DIR = Path(__file__).parent.parent
 AUDIO_DIR = BASE_DIR / "data" / "audio"
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # SEC-5b: 50MB upload size limit
 PHOTOS_DIR_DATA = BASE_DIR / "data" / "photos"
 STATIC_DIR = BASE_DIR / "static"
 
@@ -109,13 +110,17 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS for local development
+# CORS — origins from env (comma-separated), falling back to safe localhost defaults
+_default_origins = "http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000"
+CORS_ORIGINS = [
+    o.strip() for o in os.environ.get("CORS_ORIGINS", _default_origins).split(",") if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:3000"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # HTTPS redirect (enable in production with FORCE_HTTPS=1)
@@ -183,7 +188,7 @@ async def get_current_user(authorization: str = Header(None)) -> dict:
             if datetime.now(UTC) - created > timedelta(days=TOKEN_EXPIRY_DAYS):
                 raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
         except ValueError:
-            pass  # Malformed date — allow through, will be fixed on next login
+            raise HTTPException(status_code=401, detail="Session invalid. Please log in again.")  # SEC-10
     
     return user
 
@@ -242,7 +247,7 @@ async def register(data: RegisterRequest, request: Request):
     Returns a session token for subsequent requests.
     Rate limited to 5 requests per minute per IP.
     """
-    logger.info(f"Registration attempt for email: {data.email}")
+    logger.info("Registration attempt")  # SEC-7: no PII in logs
     
     # Hash PIN if provided (B2) — uses bcrypt for secure hashing
     pin_hash = ''
@@ -366,7 +371,9 @@ async def start_session(authorization: str = Header(None)):
     }
 
 @app.post("/api/upload")
+@limiter.limit("30/minute")  # SEC-9: rate limit uploads
 async def upload_chunk(
+    request: Request,
     audio: UploadFile = File(...),
     session_uuid: str = Form(...),
     chunk_index: int = Form(...),
@@ -396,7 +403,11 @@ async def upload_chunk(
     
     # Write file
     content = await audio.read()
-    
+
+    # SEC-5b: Reject oversized uploads
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large. Maximum upload size is 50MB.")
+
     # Basic validation: must be at least 1KB and start with WebM/Matroska magic bytes
     if len(content) < 1024:
         raise HTTPException(status_code=400, detail="Audio file too small — may be corrupt")

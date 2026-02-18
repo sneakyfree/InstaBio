@@ -122,3 +122,27 @@ async def test_get_transcripts_empty(registered_user):
     data = response.json()
     assert data["total_count"] == 0
     assert data["transcripts"] == []
+
+
+@pytest.mark.asyncio
+async def test_upload_oversized_file_rejected(registered_user):
+    """SEC-5b: Files larger than 50MB should be rejected with HTTP 413."""
+    client, token, _ = registered_user
+
+    # Start a session
+    start_resp = await client.post("/api/session/start", headers={
+        "Authorization": f"Bearer {token}"
+    })
+    session_uuid = start_resp.json()["session_uuid"]
+
+    # Build a >50MB payload with valid WebM magic bytes
+    webm_magic = b'\x1a\x45\xdf\xa3'
+    oversized_content = webm_magic + b'\x00' * (51 * 1024 * 1024)
+
+    response = await client.post(
+        "/api/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        data={"session_uuid": session_uuid, "chunk_index": "0", "duration": "1.0"},
+        files={"audio": ("chunk.webm", oversized_content, "audio/webm")},
+    )
+    assert response.status_code == 413

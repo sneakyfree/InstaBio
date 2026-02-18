@@ -33,6 +33,11 @@ COPY static/ ./static/
 # Create data directories
 RUN mkdir -p data/audio data/transcripts
 
+# D-4: Non-root user for security
+RUN useradd -r -s /bin/false instabio \
+    && chown -R instabio:instabio /app/data
+USER instabio
+
 # Expose port
 EXPOSE 8000
 

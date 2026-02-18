@@ -61,6 +61,36 @@ async def test_fresh_token_works(client):
 
 
 @pytest.mark.asyncio
+async def test_malformed_token_date_rejected(client):
+    """SEC-10: A token with a malformed token_created_at should return 401."""
+    # Register user
+    response = await client.post("/api/register", json={
+        "first_name": "Malformed",
+        "birth_year": 1950,
+        "email": "malformed@example.com"
+    })
+    data = response.json()
+    token = data["token"]
+
+    # Manually set token_created_at to a non-date string
+    from app import database as db_mod
+    import aiosqlite
+    async with aiosqlite.connect(db_mod.DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET token_created_at = ? WHERE id = ?",
+            ("not-a-date", data["user_id"])
+        )
+        await db.commit()
+
+    # Token with malformed date should be rejected (not silently allowed)
+    response = await client.get("/api/user/stats", headers={
+        "Authorization": f"Bearer {token}"
+    })
+    assert response.status_code == 401
+    assert "session invalid" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
 async def test_logout_invalidates_token(client):
     """After logout, the old token should no longer work."""
     # Register
