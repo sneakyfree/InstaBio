@@ -34,11 +34,12 @@ from .entity_extraction import get_extractor, ExtractionResult, build_timeline
 from .biography import get_biography_generator, BiographyStyle
 from .journal import get_journal_generator
 from .llm_client import get_llm_client, test_connection
-from .voice_clone import get_voice_clone_status_dict
-from .avatar import get_avatar_status_dict, count_user_photos, list_user_photos, save_user_photo, PHOTOS_DIR
+from .voice_clone import get_voice_clone_status_dict, generate_voice_clone, synthesize_speech
+from .avatar import get_avatar_status_dict, count_user_photos, list_user_photos, save_user_photo, generate_avatar, PHOTOS_DIR
 from .avatar_video import generate_avatar_video, list_portraits as list_avatar_portraits, get_portrait as get_avatar_portrait, check_veron_available
 from .interview import start_session as start_interview_session, next_question as interview_next_question, get_session_status as get_interview_status
-from .soul import get_soul_status_dict
+from .soul import get_soul_status_dict, activate_soul, chat_with_soul
+from .payments import create_checkout_session, handle_webhook as stripe_handle_webhook, list_products
 
 # ----- Logging Configuration -----
 logging.basicConfig(
@@ -264,8 +265,9 @@ async def register(data: RegisterRequest, request: Request):
             pin_ok = False
             try:
                 pin_ok = bcrypt.checkpw(data.pin.encode(), stored_pin.encode())
-            except (ValueError, TypeError):
-                pass  # Not a valid bcrypt hash — try SHA-256 fallback
+            except (ValueError, TypeError) as exc:
+                logger.warning(f"Invalid bcrypt hash format for user {existing.get('id')}: {exc}")
+                pin_ok = False  # Not a valid bcrypt hash — try SHA-256 fallback
             
             if not pin_ok:
                 # Migration: check against legacy SHA-256 hash
@@ -1201,6 +1203,87 @@ async def api_interview_status(session_id: str, authorization: str = Header(None
         raise HTTPException(status_code=404, detail="Interview session not found")
     return {"success": True, **status}
 
+
+# ----- Soul Endpoints -----
+
+class SoulChatRequest(BaseModel):
+    message: str
+
+@app.post("/api/soul/activate")
+async def api_soul_activate(authorization: str = Header(None)):
+    """Activate the Soul — builds RAG index over user transcripts."""
+    user = await get_current_user(authorization)
+    result = await activate_soul(user['id'])
+    return {"success": result.get('status') != 'error', **result}
+
+@app.post("/api/soul/chat")
+async def api_soul_chat(data: SoulChatRequest, authorization: str = Header(None)):
+    """Chat with the Soul."""
+    user = await get_current_user(authorization)
+    result = await chat_with_soul(user['id'], data.message)
+    return {"success": result.get('status') == 'ok', **result}
+
+# ----- Voice Clone Generation Endpoint -----
+
+@app.post("/api/voice-clone/generate")
+async def api_voice_clone_generate(authorization: str = Header(None)):
+    """Generate a voice clone from the user's audio recordings."""
+    user = await get_current_user(authorization)
+    sessions = await db.get_user_sessions(user['id'])
+    # Gather audio file paths from all sessions
+    audio_files = []
+    for session in sessions:
+        session_dir = AUDIO_DIR / session['session_uuid']
+        if session_dir.exists():
+            for f in sorted(session_dir.iterdir()):
+                if f.suffix in {'.webm', '.wav', '.mp3', '.ogg'}:
+                    audio_files.append(str(f))
+    result = await generate_voice_clone(user['id'], audio_files)
+    return {"success": result.get('status') == 'ready', **result}
+
+# ----- Avatar Generation Endpoint -----
+
+@app.post("/api/avatar/generate")
+async def api_avatar_generate(authorization: str = Header(None)):
+    """Generate an avatar from the user's photos."""
+    user = await get_current_user(authorization)
+    photos = await list_user_photos(user['id'])
+    photo_paths = []
+    for photo in photos:
+        p = PHOTOS_DIR / str(user['id']) / photo['filename']
+        if p.exists():
+            photo_paths.append(str(p))
+    sessions = await db.get_user_sessions(user['id'])
+    video_hours = sum(s['total_duration_seconds'] for s in sessions) / 3600
+    result = await generate_avatar(user['id'], photo_paths, video_hours)
+    return {"success": result.get('status') == 'ready', **result}
+
+# ----- Payment Endpoints -----
+
+class CheckoutRequest(BaseModel):
+    product_id: str
+
+@app.post("/api/checkout")
+async def api_checkout(data: CheckoutRequest, authorization: str = Header(None)):
+    """Create a Stripe checkout session for a product."""
+    user = await get_current_user(authorization)
+    result = await create_checkout_session(user['id'], data.product_id, user.get('email'))
+    return {"success": result.get('status') == 'created', **result}
+
+@app.get("/api/products")
+async def api_products():
+    """List all available products and prices."""
+    return {"success": True, "products": list_products()}
+
+@app.post("/api/webhook/stripe")
+async def api_stripe_webhook(request: Request):
+    """Handle Stripe webhook events (payment confirmations)."""
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+    result = await stripe_handle_webhook(payload, sig_header)
+    if result.get('status') == 'error':
+        raise HTTPException(status_code=400, detail=result.get('message'))
+    return result
 
 # ----- Delete Endpoints -----
 

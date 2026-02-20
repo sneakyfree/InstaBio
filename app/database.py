@@ -105,27 +105,37 @@ async def init_db():
             ON transcripts(session_id)
         """)
         
-        # Safe migration — add retry_count to audio_chunks if missing
-        try:
-            await db.execute("ALTER TABLE audio_chunks ADD COLUMN retry_count INTEGER DEFAULT 0")
-        except Exception:
-            pass
-        try:
-            await db.execute("ALTER TABLE audio_chunks ADD COLUMN last_error TEXT")
-        except Exception:
-            pass
-        
+        # Safe migration helpers
+        async def add_column_if_missing(sql: str, column_name: str) -> None:
+            try:
+                await db.execute(sql)
+            except aiosqlite.OperationalError as exc:
+                # SQLite duplicate-column on already-migrated DBs
+                if "duplicate column name" in str(exc).lower() and column_name.lower() in str(exc).lower():
+                    return
+                raise
+
+        # Safe migration — add retry_count / last_error to audio_chunks if missing
+        await add_column_if_missing(
+            "ALTER TABLE audio_chunks ADD COLUMN retry_count INTEGER DEFAULT 0",
+            "retry_count",
+        )
+        await add_column_if_missing(
+            "ALTER TABLE audio_chunks ADD COLUMN last_error TEXT",
+            "last_error",
+        )
+
         # Safe migration — add token_created_at if missing (for existing DBs)
-        try:
-            await db.execute("ALTER TABLE users ADD COLUMN token_created_at TEXT DEFAULT ''")
-        except Exception:
-            pass  # Column already exists
-        
+        await add_column_if_missing(
+            "ALTER TABLE users ADD COLUMN token_created_at TEXT DEFAULT ''",
+            "token_created_at",
+        )
+
         # Safe migration — add pin_hash column (B2: PIN auth)
-        try:
-            await db.execute("ALTER TABLE users ADD COLUMN pin_hash TEXT DEFAULT ''")
-        except Exception:
-            pass  # Column already exists
+        await add_column_if_missing(
+            "ALTER TABLE users ADD COLUMN pin_hash TEXT DEFAULT ''",
+            "pin_hash",
+        )
         
         # Interview sessions table (B3: persist interview state)
         await db.execute("""
