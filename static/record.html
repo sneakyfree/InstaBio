@@ -2027,6 +2027,8 @@
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
                         finalTranscript += transcript + ' ';
+                        window._speechResultReceived = true;
+                        if (window._speechFallbackTimer) clearTimeout(window._speechFallbackTimer);
                     } else {
                         interimTranscript += transcript;
                         if (interviewMode) lastSpeechTime = Date.now();
@@ -2081,8 +2083,12 @@
             };
 
             recognition.onerror = (event) => {
+                console.warn('[SpeechRecognition] error:', event.error);
                 if (event.error === 'no-speech' && isRecording && !isPaused) {
                     setTimeout(() => { if (isRecording && !isPaused) recognition.start(); }, 100);
+                } else if (event.error === 'network' || event.error === 'service-not-allowed' || event.error === 'not-allowed') {
+                    // Show fallback message — recording still works, just no live text
+                    showSpeechFallback(event.error);
                 }
             };
 
@@ -2097,6 +2103,29 @@
             };
 
             try { recognition.start(); } catch (e) { }
+
+            // Timeout: if no result after 8 seconds, show reassuring fallback
+            if (!window._speechResultReceived) {
+                window._speechFallbackTimer = setTimeout(() => {
+                    if (!window._speechResultReceived && isRecording) {
+                        showSpeechFallback('timeout');
+                    }
+                }, 8000);
+            }
+        }
+
+        function showSpeechFallback(reason) {
+            // Only show once
+            if (window._speechFallbackShown) return;
+            window._speechFallbackShown = true;
+
+            transcriptPlaceholder.innerHTML = `
+                <p style="font-size:36px;">🎙️✅</p>
+                <p style="font-weight:600; color:var(--color-primary);">Your recording is being saved!</p>
+                <p style="margin-top:8px;">Live text preview isn't available in this browser, but don't worry —</p>
+                <p style="margin-top:4px;"><strong>your words are being recorded and will be transcribed automatically</strong> when saved.</p>
+                <p style="margin-top:12px; font-size:14px; color:#888;">Just keep talking. Everything is being captured. 💚</p>
+            `;
         }
 
         function stopSpeechRecognition() {
