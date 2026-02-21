@@ -3,7 +3,7 @@
  * Enables offline capability and "Add to Home Screen"
  */
 
-const CACHE_NAME = 'instabio-v4';
+const CACHE_NAME = 'instabio-v5';
 const STATIC_ASSETS = [
     '/',
     '/onboard',

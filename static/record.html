@@ -1372,6 +1372,11 @@
         let currentChunks = [];
         let transcriptLines = [];
 
+        // Auth (must be before any code that uses userKey)
+        const token = localStorage.getItem('instabio_token');
+        const _uid = token ? token.substring(0, 8) : 'anon';
+        function userKey(key) { return `${key}_${_uid}`; }
+
         // Restore transcript from localStorage if returning to page
         (function restoreTranscript() {
             try {
@@ -1439,12 +1444,7 @@
         const sizeSliderInput = document.getElementById('size-slider');
         const beginBtnEl = document.getElementById('begin-btn');
 
-        // Auth
-        const token = localStorage.getItem('instabio_token');
-
-        // Scope all localStorage keys by user to prevent cross-account data leakage
-        const _uid = token ? token.substring(0, 8) : 'anon';
-        function userKey(key) { return `${key}_${_uid}`; }
+        // Auth — defined above (before restoreTranscript IIFE)
 
         // ===== Mode Selection =====
         function selectMode(mode) {
