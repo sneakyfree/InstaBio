@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2D5016">
     <title>Recording — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
@@ -42,7 +42,7 @@
             color: var(--color-text);
             background: var(--color-background);
             min-height: 100vh;
-            overflow: hidden;
+            overflow-y: auto;
             transition: box-shadow 0.5s ease;
         }
 
@@ -508,13 +508,13 @@
             background: var(--color-white);
             border-radius: var(--radius);
             padding: 16px;
-            overflow-y: auto;
+            overflow-y: scroll;
             margin-bottom: 4px;
             min-height: 200px;
+            max-height: 50vh;
             scroll-behavior: smooth;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
         }
 
         .transcript-placeholder {
@@ -652,11 +652,11 @@
         }
 
         .record-btn {
-            width: 80px;
-            height: 80px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             border: none;
-            font-size: 36px;
+            font-size: 48px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -667,7 +667,7 @@
         }
 
         .record-btn.ready {
-            background: var(--color-blue);
+            background: var(--color-green);
             color: var(--color-white);
         }
 
@@ -762,12 +762,375 @@
                 transition: none !important;
             }
         }
+
+        /* ===== R1.1 RED Interrupted State ===== */
+        body.interrupted-state {
+            border: 8px solid #CC3333 !important;
+            animation: flash-red 0.8s ease-in-out infinite alternate !important;
+        }
+
+        @keyframes flash-red {
+            from {
+                border-color: #CC3333;
+                box-shadow: inset 0 0 30px rgba(204, 51, 51, 0.08);
+            }
+
+            to {
+                border-color: #881111;
+                box-shadow: inset 0 0 60px rgba(204, 51, 51, 0.15);
+            }
+        }
+
+        .interrupted-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, #FFF0F0 0%, #FFF8F0 40%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: var(--spacing);
+            text-align: center;
+        }
+
+        .interrupted-overlay.hidden {
+            display: none;
+        }
+
+        .interrupted-badge {
+            font-size: 32px;
+            font-weight: 800;
+            color: #CC3333;
+            margin-bottom: 8px;
+        }
+
+        .interrupted-overlay h2 {
+            font-size: 26px;
+            color: var(--color-primary);
+            margin-bottom: 12px;
+        }
+
+        .interrupted-overlay .safe-msg {
+            font-size: 22px;
+            padding: 16px 24px;
+            margin: 12px 0;
+            background: rgba(45, 80, 22, 0.08);
+            border-radius: var(--radius);
+            color: var(--color-primary);
+        }
+
+        .interrupted-overlay .last-saved-info {
+            font-size: 20px;
+            color: var(--color-text-light);
+            margin: 8px 0;
+        }
+
+        .interrupted-overlay .last-saved-info strong {
+            color: var(--color-primary);
+        }
+
+        .auto-resume-countdown {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--color-green);
+            margin: 16px 0 4px;
+            min-height: 48px;
+        }
+
+        .auto-resume-label {
+            font-size: 18px;
+            color: var(--color-text-light);
+            margin-bottom: 16px;
+        }
+
+        .interrupted-buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .interrupted-buttons button {
+            min-height: 64px;
+            padding: 0 32px;
+            border-radius: var(--radius);
+            font-size: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-resume-now {
+            background: var(--color-green);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(22, 163, 74, 0.3);
+        }
+
+        .btn-stay-paused {
+            background: var(--color-white);
+            color: var(--color-text);
+            border: 2px solid #ccc !important;
+        }
+
+        /* ===== R1.3 Heartbeat Dot ===== */
+        .heartbeat-dot {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 500;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--color-green);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .heartbeat-dot.active {
+            opacity: 1;
+            animation: hb-pulse 1.5s ease-in-out infinite;
+        }
+
+        .heartbeat-dot.error {
+            background: #CC3333;
+        }
+
+        @keyframes hb-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: scale(1.4);
+                opacity: 1;
+            }
+        }
+
+        /* ===== R1.4 Silence Toast ===== */
+        .silence-toast {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 248, 240, 0.97);
+            border: 2px solid var(--color-primary);
+            border-radius: var(--radius);
+            padding: 16px 24px;
+            z-index: 600;
+            font-size: 20px;
+            color: var(--color-text);
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            max-width: 90%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+
+        .silence-toast.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .silence-toast button {
+            margin-top: 12px;
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: none;
+            background: var(--color-primary);
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* ===== R1.8 Crash Recovery Banner ===== */
+        .crash-recovery {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #F0FFF0 0%, #E8F8E8 100%);
+            border-bottom: 3px solid var(--color-primary);
+            padding: 16px 24px;
+            z-index: 1200;
+            text-align: center;
+        }
+
+        .crash-recovery.hidden {
+            display: none;
+        }
+
+        .crash-recovery h3 {
+            font-size: 22px;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+
+        .crash-recovery p {
+            font-size: 18px;
+            color: var(--color-text-light);
+            margin-bottom: 12px;
+        }
+
+        .crash-recovery .cr-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .crash-recovery .cr-buttons button {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            min-height: 48px;
+        }
+
+        .cr-continue {
+            background: var(--color-green);
+            color: #fff;
+        }
+
+        .cr-fresh {
+            background: var(--color-white);
+            color: var(--color-text);
+            border: 2px solid #ccc !important;
+        }
+
+        /* ===== R1.9 Upload Progress Bar ===== */
+        .upload-progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(45, 80, 22, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .upload-progress-bar .fill {
+            height: 100%;
+            width: 0%;
+            background: var(--color-green);
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .cloud-status {
+            font-size: 16px;
+            color: var(--color-primary);
+            min-height: 22px;
+        }
+
+        /* === MOBILE RESPONSIVE === */
+        @media (max-width: 600px) {
+            .container {
+                padding: 8px;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                gap: 4px;
+                padding: 8px;
+            }
+
+            .timer {
+                font-size: 28px;
+            }
+
+            .status-text {
+                font-size: 14px;
+            }
+
+            .record-btn {
+                width: 100px;
+                height: 100px;
+                font-size: 40px;
+            }
+
+            .transcript-area {
+                padding: 12px;
+                min-height: 200px;
+            }
+
+            .transcript-area h3 {
+                font-size: 16px;
+            }
+
+            h1,
+            h2 {
+                font-size: 20px;
+            }
+
+            .wifi-indicator {
+                font-size: 13px !important;
+                padding: 6px;
+            }
+
+            .encouragement {
+                font-size: 16px;
+                padding: 12px 16px;
+            }
+
+            .session-stats {
+                font-size: 13px;
+                gap: 8px;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <script src="/static/i18n.js"></script>
     <script src="/static/shared.js"></script>
     <script>renderNav('record');</script>
+
+    <!-- R1.3 Heartbeat Dot -->
+    <div id="heartbeat-dot" class="heartbeat-dot"></div>
+
+    <!-- R1.1/R1.6 Interrupted Overlay (RED state + auto-resume) -->
+    <div id="interrupted-overlay" class="interrupted-overlay hidden">
+        <div class="interrupted-badge">⚠️ RECORDING PAUSED</div>
+        <h2>Don't worry — everything is safe!</h2>
+        <div class="safe-msg" id="interrupted-safe-msg">
+            ✅ Your recording was paused automatically. All your words are saved.
+        </div>
+        <div class="last-saved-info">
+            Last saved: <strong id="interrupted-last-saved">just now</strong> · <strong
+                id="interrupted-chunks">0</strong> chunks safe
+        </div>
+        <div id="auto-resume-countdown" class="auto-resume-countdown"></div>
+        <div id="auto-resume-label" class="auto-resume-label"></div>
+        <div class="interrupted-buttons">
+            <button class="btn-resume-now" onclick="resumeFromInterruption()">▶️ Resume Now</button>
+            <button class="btn-stay-paused" onclick="stayPaused()">☕ Stay Paused</button>
+        </div>
+    </div>
+
+    <!-- R1.4 Silence Toast -->
+    <div id="silence-toast" class="silence-toast">
+        <div id="silence-toast-msg">Are you still there? Your recording is running. 🎙️</div>
+        <button onclick="dismissSilenceToast()">I'm here! Keep recording</button>
+    </div>
+
+    <!-- R1.8 Crash Recovery Banner -->
+    <div id="crash-recovery" class="crash-recovery hidden">
+        <h3>🌿 Welcome back!</h3>
+        <p id="crash-recovery-msg">We saved everything from your last session.</p>
+        <div class="cr-buttons">
+            <button class="cr-continue" onclick="continueRecovery()">Continue Recording</button>
+            <button class="cr-fresh" onclick="dismissRecovery()">Start Fresh</button>
+        </div>
+    </div>
 
     <!-- Mode Selection Screen -->
     <div id="mode-selection" class="mode-selection-screen hidden">
@@ -808,6 +1171,30 @@
             </div>
         </div>
 
+        <div class="guided-label">— or record yourself on video —</div>
+
+        <div class="mode-card" id="opt-video" onclick="selectMode('video')" style="border-color:#9333ea;">
+            <span class="icon">📹</span>
+            <div class="card-text">
+                <div class="card-title">Video Story</div>
+                <div class="card-desc">Record video of yourself telling your story</div>
+            </div>
+        </div>
+
+        <div
+            style="margin:16px 0; padding:16px; background:linear-gradient(135deg, #f0fdf4, #ecfdf5); border-radius:12px; border:1px solid #bbf7d0; font-size:14px; line-height:1.6;">
+            <div style="font-weight:600; font-size:15px; margin-bottom:8px;">✨ Your recordings do triple duty:</div>
+            <div style="display:grid; gap:8px;">
+                <div>📖 <strong>Your Story</strong> — Every word becomes part of your biography & lifetime journal</div>
+                <div>🎤 <strong>Voice Clone</strong> — Your audio recordings train an AI to speak in your voice, so your
+                    story can be read aloud to future generations <em>in your own voice</em></div>
+                <div>👤 <strong>Avatar Clone</strong> — Video recordings capture your expressions, mannerisms, and
+                    appearance to create a lifelike digital avatar that can tell your stories face-to-face</div>
+            </div>
+            <div style="margin-top:10px; font-size:13px; color:#666;">💡 The more you record, the more accurate and
+                lifelike your voice and avatar become. Even 10 minutes of video is enough to get started!</div>
+        </div>
+
         <button id="begin-btn" class="begin-btn" disabled onclick="beginRecording()">🌟 Let's Begin!</button>
     </div>
 
@@ -837,23 +1224,67 @@
 
     <!-- Main Container -->
     <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <a href="/" class="logo">🌿 InstaBio</a>
-            <div class="nav-links">
-                <a href="/vault" class="nav-link">Vault</a>
-                <a href="/biography" class="nav-link">Bio</a>
-            </div>
-        </div>
+        <!-- Header controlled by shared nav -->
 
         <!-- Wi-Fi Indicator -->
         <div id="wifi-indicator" class="wifi-indicator">📶 Checking connection...</div>
+        <div id="transcription-badge" class="wifi-indicator" style="font-size:14px;">🔄 Checking transcription...</div>
+        <div id="language-badge" class="wifi-indicator" style="font-size:14px; display:none;"></div>
+        <div id="sticky-language-bar"
+            style="position:sticky; top:0; z-index:100; background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); padding:8px 16px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; color:#555;">
+            🌐 Language:
+            <select id="language-select" onchange="changeRecognitionLanguage(this.value)"
+                style="padding:8px 12px; border-radius:8px; border:2px solid var(--color-primary); font-size:15px; min-height:44px; background:#fff; cursor:pointer; font-weight:500; color:var(--color-text);">
+                <optgroup label="Americas & Europe">
+                    <option value="en-US">🇺🇸 English</option>
+                    <option value="es-ES">🇪🇸 Español</option>
+                    <option value="fr-FR">🇫🇷 Français</option>
+                    <option value="pt-BR">🇧🇷 Português</option>
+                    <option value="de-DE">🇩🇪 Deutsch</option>
+                    <option value="it-IT">🇮🇹 Italiano</option>
+                    <option value="nl-NL">🇳🇱 Nederlands</option>
+                    <option value="pl-PL">🇵🇱 Polski</option>
+                    <option value="ro-RO">🇷🇴 Română</option>
+                    <option value="sv-SE">🇸🇪 Svenska</option>
+                    <option value="hu-HU">🇭🇺 Magyar</option>
+                    <option value="uk-UA">🇺🇦 Українська</option>
+                    <option value="el-GR">🇬🇷 Ελληνικά</option>
+                    <option value="ru-RU">🇷🇺 Русский</option>
+                    <option value="tr-TR">🇹🇷 Türkçe</option>
+                </optgroup>
+                <optgroup label="Asia & Pacific">
+                    <option value="zh-CN">🇨🇳 中文 (简体)</option>
+                    <option value="zh-TW">🇹🇼 中文 (繁體)</option>
+                    <option value="ja-JP">🇯🇵 日本語</option>
+                    <option value="ko-KR">🇰🇷 한국어</option>
+                    <option value="hi-IN">🇮🇳 हिन्दी</option>
+                    <option value="bn-IN">🇮🇳 বাংলা</option>
+                    <option value="ta-IN">🇮🇳 தமிழ்</option>
+                    <option value="ur-PK">🇵🇰 اردو</option>
+                    <option value="th-TH">🇹🇭 ไทย</option>
+                    <option value="vi-VN">🇻🇳 Tiếng Việt</option>
+                    <option value="id-ID">🇮🇩 Bahasa Indonesia</option>
+                    <option value="ms-MY">🇲🇾 Bahasa Melayu</option>
+                    <option value="fil-PH">🇵🇭 Filipino</option>
+                </optgroup>
+                <optgroup label="Middle East & Africa">
+                    <option value="ar-SA">🇸🇦 العربية</option>
+                    <option value="fa-IR">🇮🇷 فارسی</option>
+                    <option value="he-IL">🇮🇱 עברית</option>
+                    <option value="sw-KE">🇰🇪 Kiswahili</option>
+                </optgroup>
+            </select>
+        </div>
 
         <!-- Status Bar -->
         <div class="status-bar">
             <div id="timer" class="timer">0:00</div>
-            <div id="status-text" class="status-text">Tap the big blue button whenever you're ready, dear</div>
+            <div id="status-text" class="status-text">Tap the big green button whenever you're ready, dear</div>
             <div id="saving-status" class="saving-status"></div>
+            <div class="upload-progress-bar">
+                <div id="upload-fill" class="fill"></div>
+            </div>
+            <div id="cloud-status" class="cloud-status"></div>
         </div>
 
         <!-- Interview Panel (shown during recording in guided modes) -->
@@ -865,7 +1296,15 @@
             </div>
             <div id="question-display" class="question-display" style="display:none;"></div>
             <div id="interview-thinking" class="interview-thinking">💭 Thinking of your next question...</div>
+            <button id="next-question-btn" onclick="requestNextQuestion()"
+                style="display:none; margin:8px auto; padding:12px 24px; font-size:16px; border-radius:25px; border:2px solid var(--color-primary); background:white; color:var(--color-primary); cursor:pointer; font-weight:600;">
+                ➡️ Next Question
+            </button>
         </div>
+
+        <!-- Video Preview (shown during Video Story mode) -->
+        <video id="video-preview" autoplay muted playsinline
+            style="display:none; width:160px; height:120px; border-radius:12px; border:3px solid var(--color-primary); position:fixed; bottom:100px; right:16px; z-index:999; object-fit:cover; box-shadow:0 4px 12px rgba(0,0,0,0.2); background:#000;"></video>
 
         <!-- Transcript Area -->
         <div id="transcript-area" class="transcript-area">
@@ -882,6 +1321,20 @@
             Total recorded: <span id="total-time">0:00</span> •
             <span id="chunk-count">0</span> parts saved
         </div>
+
+        <!-- Storage Info -->
+        <div id="storage-info"
+            style="text-align:center; padding:8px 16px; font-size:13px; color:#666; background:rgba(255,255,255,0.7); border-radius:8px; margin:4px 0; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
+            <span>💾 Your words are stored:</span>
+            <select id="storage-select" onchange="changeStorageLocation(this.value)"
+                style="padding:4px 8px; border-radius:6px; border:1px solid #ccc; font-size:13px; background:#fff; cursor:pointer;">
+                <option value="local" selected>📱 On This Device</option>
+                <option value="server">🖥️ InstaBio Server</option>
+                <option value="gdrive">📁 Google Drive</option>
+                <option value="dropbox">📦 Dropbox</option>
+            </select>
+            <span id="storage-status" style="color:var(--color-primary);">✅ Secure</span>
+        </div>
     </div>
 
     <!-- Record Button — Floating bottom corners -->
@@ -889,6 +1342,10 @@
         <button id="break-btn" class="break-btn" onclick="pauseRecording()">☕ Break</button>
         <button id="record-btn" class="record-btn ready" aria-label="Start recording">
             🎙️
+        </button>
+        <button id="mode-btn" class="break-btn" onclick="showModeSelection()"
+            style="background:var(--color-primary-light); font-size:14px; padding:10px 16px;">
+            🔄 Change Mode
         </button>
     </div>
 
@@ -915,9 +1372,33 @@
         let currentChunks = [];
         let transcriptLines = [];
 
+        // Restore transcript from localStorage if returning to page
+        (function restoreTranscript() {
+            try {
+                const saved = localStorage.getItem(userKey('instabio_transcript'));
+                if (saved) {
+                    const lines = JSON.parse(saved);
+                    if (Array.isArray(lines) && lines.length > 0) {
+                        transcriptLines = lines;
+                        const tc = document.getElementById('transcript-content');
+                        const tp = document.getElementById('transcript-placeholder');
+                        if (tp) tp.style.display = 'none';
+                        lines.forEach(line => {
+                            const div = document.createElement('div');
+                            div.className = 'transcript-line';
+                            div.style.fontSize = 'var(--transcript-size)';
+                            div.textContent = line;
+                            tc.appendChild(div);
+                        });
+                    }
+                }
+            } catch (e) { }
+        })();
+
         // Interview state
-        let selectedMode = localStorage.getItem('instabio_mode') || null;
+        let selectedMode = localStorage.getItem(userKey('instabio_mode')) || null;
         let interviewMode = false;
+        let videoMode = false;
         let interviewSubMode = null; // 'face', 'fireside', 'quiet'
         let interviewSessionId = null;
         let interviewSilenceTimer = null;
@@ -925,7 +1406,7 @@
         let currentInterviewTranscript = '';
 
         // Text size
-        let textSize = parseInt(localStorage.getItem('instabio_textsize')) || 28;
+        let textSize = parseInt(localStorage.getItem(userKey('instabio_textsize'))) || 28;
 
         // Encouragements
         const encouragements = [
@@ -961,6 +1442,10 @@
         // Auth
         const token = localStorage.getItem('instabio_token');
 
+        // Scope all localStorage keys by user to prevent cross-account data leakage
+        const _uid = token ? token.substring(0, 8) : 'anon';
+        function userKey(key) { return `${key}_${_uid}`; }
+
         // ===== Mode Selection =====
         function selectMode(mode) {
             selectedMode = mode;
@@ -969,14 +1454,18 @@
             document.querySelectorAll('.mode-card, .free-talk-option').forEach(el => el.classList.remove('selected'));
 
             // Highlight selected
-            const map = { free: 'opt-free', face: 'opt-face', fireside: 'opt-fireside', quiet: 'opt-quiet' };
+            const map = { free: 'opt-free', face: 'opt-face', fireside: 'opt-fireside', quiet: 'opt-quiet', video: 'opt-video' };
             document.getElementById(map[mode]).classList.add('selected');
 
             beginBtnEl.disabled = false;
-            localStorage.setItem('instabio_mode', mode);
+            localStorage.setItem(userKey('instabio_mode'), mode);
         }
 
         function showModeSelection() {
+            // Pause recording if active before switching modes
+            if (isRecording && !isPaused) {
+                pauseRecording();
+            }
             modeSelection.classList.remove('hidden');
             if (selectedMode) selectMode(selectedMode);
         }
@@ -988,9 +1477,15 @@
             if (selectedMode === 'free') {
                 interviewMode = false;
                 interviewSubMode = null;
+                videoMode = false;
+            } else if (selectedMode === 'video') {
+                interviewMode = false;
+                interviewSubMode = null;
+                videoMode = true;
             } else {
                 interviewMode = true;
                 interviewSubMode = selectedMode; // 'face', 'fireside', 'quiet'
+                videoMode = false;
             }
 
             startRecording();
@@ -1000,7 +1495,7 @@
         function changeTextSize(val) {
             textSize = parseInt(val);
             document.documentElement.style.setProperty('--transcript-size', textSize + 'px');
-            localStorage.setItem('instabio_textsize', textSize);
+            localStorage.setItem(userKey('instabio_textsize'), textSize);
         }
         // Initialize text size
         sizeSliderInput.value = textSize;
@@ -1009,10 +1504,11 @@
         // ===== Interview Functions =====
         async function startInterview() {
             try {
+                const selectedLang = document.getElementById('language-select')?.value || 'en-US';
                 const resp = await fetch(`${API_URL}/interview/start`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ portrait_id: 'default' })
+                    body: JSON.stringify({ portrait_id: 'default', language: selectedLang })
                 });
                 const data = await resp.json();
                 if (data.success) {
@@ -1073,6 +1569,10 @@
             currentInterviewTranscript = '';
             lastSpeechTime = Date.now();
             startSilenceDetection();
+
+            // Show "Next Question" button for manual advancement
+            const nextBtn = document.getElementById('next-question-btn');
+            if (nextBtn) nextBtn.style.display = 'block';
         }
 
         function speakQuestion(text, onEnd) {
@@ -1102,36 +1602,64 @@
             interviewSilenceTimer = setInterval(() => {
                 if (!interviewMode || !isRecording || isPaused) return;
                 const silenceSec = (Date.now() - lastSpeechTime) / 1000;
-                if (currentInterviewTranscript.trim() && silenceSec >= 10) {
+                // Only auto-advance after 15s of silence AND if user actually spoke
+                if (currentInterviewTranscript.trim().length > 10 && silenceSec >= 15) {
                     requestNextQuestion();
                 }
             }, 1000);
         }
 
+        const askedQuestions = new Set();
+        const fallbackQuestions = [
+            "Tell me about a happy memory from your childhood.",
+            "What's a lesson you learned the hard way?",
+            "Who had the biggest influence on your life?",
+            "What are you most proud of?",
+            "Tell me about a time you overcame something difficult.",
+            "What do you want future generations to know about you?",
+            "Describe a place that feels like home to you.",
+            "What's the best advice you've ever received?",
+        ];
+        let fallbackIndex = 0;
+
         async function requestNextQuestion() {
             if (interviewSilenceTimer) clearInterval(interviewSilenceTimer);
 
             const thinking = document.getElementById('interview-thinking');
+            const nextBtn = document.getElementById('next-question-btn');
             thinking.classList.add('visible');
+            if (nextBtn) nextBtn.style.display = 'none'; // Hide while fetching
 
             try {
+                const selectedLang = document.getElementById('language-select')?.value || 'en-US';
                 const resp = await fetch(`${API_URL}/interview/next`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         session_id: interviewSessionId,
                         transcript: currentInterviewTranscript,
-                        portrait_id: 'default'
+                        portrait_id: 'default',
+                        language: selectedLang
                     })
                 });
                 const data = await resp.json();
                 if (data.success) {
-                    showInterviewQuestion(data.question, data.video_url, null);
+                    // Prevent repeating the exact same question
+                    if (askedQuestions.has(data.question)) {
+                        const fb = fallbackQuestions[fallbackIndex % fallbackQuestions.length];
+                        fallbackIndex++;
+                        showInterviewQuestion(fb, null, null);
+                    } else {
+                        askedQuestions.add(data.question);
+                        showInterviewQuestion(data.question, data.video_url, null);
+                    }
                 }
             } catch (e) {
                 console.error('Failed to get next question:', e);
                 thinking.classList.remove('visible');
-                showInterviewQuestion("That's wonderful. Can you tell me more about that?", null, null);
+                const fb = fallbackQuestions[fallbackIndex % fallbackQuestions.length];
+                fallbackIndex++;
+                showInterviewQuestion(fb, null, null);
             }
         }
 
@@ -1197,7 +1725,8 @@
 
         // ===== Recording Functions =====
         function createRecorder() {
-            const rec = new MediaRecorder(audioStream, { mimeType: 'audio/webm;codecs=opus' });
+            const mimeType = videoMode ? 'video/webm;codecs=vp9,opus' : 'audio/webm;codecs=opus';
+            const rec = new MediaRecorder(audioStream, { mimeType });
             rec.ondataavailable = (e) => {
                 if (e.data.size > 0) currentChunks.push(e.data);
             };
@@ -1214,9 +1743,19 @@
 
         async function startRecording() {
             try {
-                audioStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-                });
+                const constraints = videoMode
+                    ? { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }
+                    : { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+                audioStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                // Show video preview if in video mode
+                const videoPreview = document.getElementById('video-preview');
+                if (videoMode && videoPreview) {
+                    videoPreview.srcObject = audioStream;
+                    videoPreview.style.display = 'block';
+                } else if (videoPreview) {
+                    videoPreview.style.display = 'none';
+                }
 
                 const response = await fetch(`${API_URL}/session/start`, {
                     method: 'POST',
@@ -1247,6 +1786,11 @@
                 updateUI('recording');
                 startTimer();
                 startSpeechRecognition();
+                startHeartbeat();
+                startTripleConfirmation();
+
+                // R2.1: Start WebSocket streaming transcription
+                startStreamingTranscription();
 
                 // Show text size slider
                 textSizeSlider.classList.add('visible');
@@ -1291,6 +1835,7 @@
             formData.append('chunk_index', index);
             formData.append('duration', duration);
 
+            updateCloudStatus(true);
             try {
                 const response = await fetch(`${API_URL}/upload`, {
                     method: 'POST',
@@ -1299,6 +1844,9 @@
                 });
                 if (response.ok) {
                     if (attempt > 0) savingStatus.textContent = '✅ Chunk saved successfully!';
+                    lastSavedTimestamp = Date.now();
+                    updateCloudStatus(false);
+                    saveRecoveryState();
                     return true; // success
                 }
                 throw new Error(`Server returned ${response.status}`);
@@ -1360,6 +1908,7 @@
             if (!isRecording) return;
             isRecording = false;
             isPaused = false;
+            isInterrupted = false;
 
             if (chunkInterval) { clearInterval(chunkInterval); chunkInterval = null; }
             if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
@@ -1367,9 +1916,20 @@
 
             stopTimer();
             stopSpeechRecognition();
+            stopHeartbeat();
+            stopTripleConfirmation();
+            stopStreamingTranscription();
+            dismissSilenceToast();
+            document.body.classList.remove('interrupted-state');
+            interruptedOverlay.classList.add('hidden');
+            localStorage.removeItem(userKey('instabio_recovery'));
             if ('speechSynthesis' in window) speechSynthesis.cancel();
             updateUI('ready');
             textSizeSlider.classList.remove('visible');
+
+            // Hide video preview
+            const videoPreview = document.getElementById('video-preview');
+            if (videoPreview) { videoPreview.style.display = 'none'; videoPreview.srcObject = null; }
 
             if (interviewSilenceTimer) { clearInterval(interviewSilenceTimer); interviewSilenceTimer = null; }
             interviewSessionId = null;
@@ -1411,6 +1971,45 @@
         }
 
         // ===== Speech Recognition =====
+        let currentLang = document.getElementById('language-select')?.value || navigator.language || 'en-US';
+
+        function changeRecognitionLanguage(lang) {
+            currentLang = lang;
+            // Update the "Detected" badge to show chosen language
+            const langBadge = document.getElementById('language-badge');
+            const langCode = lang.split('-')[0].toUpperCase();
+            langBadge.style.display = 'block';
+            langBadge.textContent = `🌐 Active: ${langCode}`;
+            if (recognition && isRecording && !isPaused) {
+                // Restart recognition with new language
+                stopSpeechRecognition();
+                setTimeout(() => startSpeechRecognition(), 200);
+            }
+        }
+
+        function changeStorageLocation(location) {
+            localStorage.setItem(userKey('instabio_storage'), location);
+            const statusEl = document.getElementById('storage-status');
+            const labels = {
+                'local': '✅ Secure — saved on this device',
+                'server': '☁️ Syncing to InstaBio servers',
+                'gdrive': '📁 Google Drive (coming soon)',
+                'dropbox': '📦 Dropbox (coming soon)'
+            };
+            statusEl.textContent = labels[location] || '✅ Secure';
+            if (location === 'gdrive' || location === 'dropbox') {
+                statusEl.textContent += ' — connect in Settings';
+            }
+        }
+        // Restore saved storage preference
+        (function () {
+            const saved = localStorage.getItem(userKey('instabio_storage'));
+            if (saved) {
+                const sel = document.getElementById('storage-select');
+                if (sel) { sel.value = saved; changeStorageLocation(saved); }
+            }
+        })();
+
         function startSpeechRecognition() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
 
@@ -1418,7 +2017,7 @@
             recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = true;
-            recognition.lang = navigator.language || 'en-US';
+            recognition.lang = currentLang;
 
             recognition.onresult = (event) => {
                 let finalTranscript = '';
@@ -1436,8 +2035,16 @@
 
                 transcriptPlaceholder.style.display = 'none';
 
+                // Auto-scroll to transcript on first speech (mobile: text appears below fold)
+                if (!window._hasScrolledToTranscript) {
+                    window._hasScrolledToTranscript = true;
+                    try { transcriptArea.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { }
+                }
+
                 if (finalTranscript) {
                     transcriptLines.push(finalTranscript);
+                    // Auto-save transcript to localStorage for persistence
+                    try { localStorage.setItem(userKey('instabio_transcript'), JSON.stringify(transcriptLines)); } catch (e) { }
                     if (interviewMode) {
                         currentInterviewTranscript += finalTranscript;
                         lastSpeechTime = Date.now();
@@ -1507,7 +2114,7 @@
                     recordBtn.setAttribute('aria-label', 'Start recording');
                     breakBtn.classList.remove('visible');
                     statusText.className = 'status-text';
-                    statusText.textContent = 'Tap the big blue button whenever you\'re ready, dear';
+                    statusText.textContent = 'Tap the big green button whenever you\'re ready, dear';
                     savingStatus.textContent = '';
                     break;
 
@@ -1533,10 +2140,317 @@
             }
         }
 
+        // ===== R1 — Recording UX Hardening =====
+        // R1.1/R1.2/R1.6 — Interrupted State + Auto-Resume
+        let lastSavedTimestamp = null;
+        let autoResumeTimer = null;
+        let autoResumeCount = 0;
+        let isInterrupted = false;
+        const interruptedOverlay = document.getElementById('interrupted-overlay');
+        const heartbeatDot = document.getElementById('heartbeat-dot');
+        const silenceToast = document.getElementById('silence-toast');
+        const silenceToastMsg = document.getElementById('silence-toast-msg');
+        const cloudStatusEl = document.getElementById('cloud-status');
+        const uploadFill = document.getElementById('upload-fill');
+
+        function triggerRedState(reason) {
+            if (!isRecording || isPaused || isInterrupted) return;
+            isInterrupted = true;
+            document.body.classList.add('interrupted-state');
+            document.body.classList.remove('recording-glow');
+            // Pause recording mechanics
+            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+            if (chunkInterval) { clearInterval(chunkInterval); chunkInterval = null; }
+            stopSpeechRecognition();
+            stopHeartbeat();
+            // Update interrupted overlay info
+            document.getElementById('interrupted-last-saved').textContent =
+                lastSavedTimestamp ? new Date(lastSavedTimestamp).toLocaleTimeString() : 'just now';
+            document.getElementById('interrupted-chunks').textContent = chunkIndex;
+            interruptedOverlay.classList.remove('hidden');
+            // Start auto-resume countdown (5 seconds)
+            startAutoResumeCountdown();
+        }
+
+        function startAutoResumeCountdown() {
+            autoResumeCount = 5;
+            const countdownEl = document.getElementById('auto-resume-countdown');
+            const labelEl = document.getElementById('auto-resume-label');
+            labelEl.textContent = 'Resuming automatically...';
+            countdownEl.textContent = autoResumeCount;
+            autoResumeTimer = setInterval(() => {
+                autoResumeCount--;
+                if (autoResumeCount <= 0) {
+                    clearInterval(autoResumeTimer);
+                    autoResumeTimer = null;
+                    resumeFromInterruption();
+                } else {
+                    countdownEl.textContent = autoResumeCount;
+                }
+            }, 1000);
+        }
+
+        function resumeFromInterruption() {
+            if (autoResumeTimer) { clearInterval(autoResumeTimer); autoResumeTimer = null; }
+            isInterrupted = false;
+            document.body.classList.remove('interrupted-state');
+            interruptedOverlay.classList.add('hidden');
+            document.getElementById('auto-resume-countdown').textContent = '';
+            document.getElementById('auto-resume-label').textContent = '';
+            // Resume recording
+            currentChunks = [];
+            mediaRecorder = createRecorder();
+            mediaRecorder.start();
+            chunkInterval = setInterval(() => {
+                if (isRecording && !isPaused && mediaRecorder.state === 'recording') mediaRecorder.stop();
+            }, CHUNK_DURATION_MS);
+            document.body.classList.add('recording-glow');
+            startSpeechRecognition();
+            startHeartbeat();
+        }
+
+        function stayPaused() {
+            if (autoResumeTimer) { clearInterval(autoResumeTimer); autoResumeTimer = null; }
+            document.getElementById('auto-resume-countdown').textContent = '';
+            document.getElementById('auto-resume-label').textContent = 'Take your time. Tap Resume when ready. 💚';
+            isInterrupted = false;
+            isPaused = true;
+            pausedTime += Date.now() - recordingStartTime;
+            document.body.classList.remove('interrupted-state');
+            interruptedOverlay.classList.add('hidden');
+            updateUI('paused');
+        }
+
+        // R1.3 — Heartbeat Monitor
+        let heartbeatInterval = null;
+        let silenceCounter = 0;
+        let recorderFailCount = 0; // Tolerance counter for MediaRecorder state checks
+        let analyser = null;
+
+        function startHeartbeat() {
+            if (!audioStream) return;
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaStreamSource(audioStream);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+            } catch (e) { /* analyser optional */ }
+
+            heartbeatDot.classList.add('active');
+            heartbeatDot.classList.remove('error');
+            silenceCounter = 0;
+
+            heartbeatInterval = setInterval(() => {
+                if (!isRecording || isPaused || isInterrupted) return;
+                // Check MediaRecorder state — with tolerance to avoid false red screens
+                if (mediaRecorder && mediaRecorder.state !== 'recording') {
+                    recorderFailCount++;
+                    // Only trigger red state after 3 consecutive failures (~9s)
+                    // This prevents false alarms during chunk rotation or TTS playback
+                    if (recorderFailCount >= 3 && !interviewMode) {
+                        heartbeatDot.classList.add('error');
+                        triggerRedState('Recording stopped unexpectedly');
+                        return;
+                    }
+                } else {
+                    recorderFailCount = 0; // Reset on success
+                }
+                // Check audio level
+                if (analyser) {
+                    const dataArray = new Uint8Array(analyser.fftSize);
+                    analyser.getByteTimeDomainData(dataArray);
+                    let maxAmp = 0;
+                    for (let i = 0; i < dataArray.length; i++) {
+                        const v = Math.abs(dataArray[i] - 128);
+                        if (v > maxAmp) maxAmp = v;
+                    }
+                    if (maxAmp < 2) {
+                        silenceCounter++;
+                    } else {
+                        silenceCounter = 0;
+                        dismissSilenceToast();
+                    }
+                }
+                // R1.4 — Silence detection (non-interview mode)
+                if (!interviewMode && silenceCounter >= 10) { // 30s
+                    showSilenceToast(false);
+                }
+                if (!interviewMode && silenceCounter >= 40) { // 2 min
+                    showSilenceToast(true);
+                }
+            }, 3000);
+        }
+
+        function stopHeartbeat() {
+            if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+            heartbeatDot.classList.remove('active', 'error');
+        }
+
+        // R1.4 — Silence Toast
+        function showSilenceToast(persistent) {
+            if (persistent) {
+                silenceToastMsg.textContent = "We haven't heard anything for 2 minutes. Would you like to pause?";
+            } else {
+                silenceToastMsg.textContent = "Are you still there? Your recording is running. 🎙️";
+            }
+            silenceToast.classList.add('visible');
+            if (!persistent) setTimeout(() => silenceToast.classList.remove('visible'), 10000);
+        }
+
+        function dismissSilenceToast() {
+            silenceToast.classList.remove('visible');
+            silenceCounter = 0;
+        }
+
+        // R1.5 — Triple Confirmation (optional audio tick + haptic)
+        let tripleConfirmInterval = null;
+        function startTripleConfirmation() {
+            let elapsed = 0;
+            tripleConfirmInterval = setInterval(() => {
+                elapsed += 60;
+                // Haptic every 5 min on mobile
+                if (elapsed % 300 === 0 && navigator.vibrate) {
+                    navigator.vibrate(100);
+                }
+            }, 60000);
+        }
+        function stopTripleConfirmation() {
+            if (tripleConfirmInterval) { clearInterval(tripleConfirmInterval); tripleConfirmInterval = null; }
+        }
+
+        // R1.8 — Crash Recovery
+        function saveRecoveryState() {
+            // Always save transcript regardless of session
+            if (transcriptLines.length > 0) {
+                localStorage.setItem(userKey('instabio_transcript'), JSON.stringify(transcriptLines));
+            }
+            if (!sessionUUID) return;
+            const state = {
+                sessionUuid: sessionUUID, sessionId: sessionId,
+                chunksSaved: chunkIndex,
+                totalDuration: pausedTime + (Date.now() - (recordingStartTime || Date.now())),
+                lastSaveTime: new Date().toISOString(), timestamp: Date.now()
+            };
+            localStorage.setItem(userKey('instabio_recovery'), JSON.stringify(state));
+        }
+
+        function checkCrashRecovery() {
+            const raw = localStorage.getItem(userKey('instabio_recovery'));
+            if (!raw) return;
+            try {
+                const state = JSON.parse(raw);
+                const age = Date.now() - state.timestamp;
+                if (age > 24 * 60 * 60 * 1000) { localStorage.removeItem(userKey('instabio_recovery')); return; }
+                const mins = Math.floor(state.totalDuration / 60000);
+                document.getElementById('crash-recovery-msg').textContent =
+                    `We saved ${state.chunksSaved} chunks (${mins} min) from your last session. Ready to continue?`;
+                document.getElementById('crash-recovery').classList.remove('hidden');
+            } catch (e) { localStorage.removeItem(userKey('instabio_recovery')); }
+        }
+
+        function continueRecovery() {
+            const raw = localStorage.getItem(userKey('instabio_recovery'));
+            if (raw) {
+                try {
+                    const state = JSON.parse(raw);
+                    sessionUUID = state.sessionUuid;
+                    sessionId = state.sessionId;
+                    chunkIndex = state.chunksSaved;
+                    pausedTime = state.totalDuration;
+                } catch (e) { }
+            }
+            localStorage.removeItem(userKey('instabio_recovery'));
+            document.getElementById('crash-recovery').classList.add('hidden');
+            showModeSelection();
+        }
+
+        function dismissRecovery() {
+            localStorage.removeItem(userKey('instabio_recovery'));
+            document.getElementById('crash-recovery').classList.add('hidden');
+        }
+
+        // R1.9 — Upload tracking
+        let chunksUploaded = 0;
+        let chunksTotal = 0;
+
+        function updateCloudStatus(uploading) {
+            if (uploading) {
+                cloudStatusEl.textContent = '☁️⬆️ Uploading...';
+                uploadFill.style.width = '50%';
+            } else if (!navigator.onLine) {
+                cloudStatusEl.textContent = '☁️❌ Offline — saved locally';
+                uploadFill.style.width = '0%';
+            } else {
+                cloudStatusEl.textContent = `☁️✅ All synced · ${chunkIndex} chunks`;
+                uploadFill.style.width = '100%';
+                setTimeout(() => { uploadFill.style.width = '0%'; }, 2000);
+            }
+        }
+
+        // ===== R2: WebSocket Streaming Transcription =====
+        let streamWs = null;
+        let streamRecorder = null;
+
+        function startStreamingTranscription() {
+            try {
+                const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                streamWs = new WebSocket(`${wsProtocol}//${location.host}/ws/transcribe`);
+                streamWs.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        // R2.3: Language detection (only if user hasn't manually chosen)
+                        if (data.language) {
+                            const langBadge = document.getElementById('language-badge');
+                            const langSelect = document.getElementById('language-select');
+                            // Show server detection only if user is on default (English)
+                            // Otherwise, the user's manual selection takes priority
+                            if (!langSelect || langSelect.value === 'en-US') {
+                                langBadge.style.display = 'block';
+                                langBadge.textContent = `🌐 Detected: ${data.language.toUpperCase()}`;
+                            }
+                        }
+                    } catch (e) { /* ignore parse errors */ }
+                };
+                streamWs.onclose = () => { streamWs = null; };
+                streamWs.onerror = () => { streamWs = null; };
+
+                // Send audio chunks over WebSocket for streaming
+                if (audioStream) {
+                    try {
+                        streamRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm;codecs=opus' });
+                        const streamChunks = [];
+                        streamRecorder.ondataavailable = (e) => {
+                            if (e.data.size > 0 && streamWs && streamWs.readyState === WebSocket.OPEN) {
+                                e.data.arrayBuffer().then(buf => {
+                                    if (streamWs && streamWs.readyState === WebSocket.OPEN) {
+                                        streamWs.send(buf);
+                                    }
+                                });
+                            }
+                        };
+                        streamRecorder.start(3000); // 3-second chunks for streaming
+                    } catch (e) { /* streaming recorder optional */ }
+                }
+            } catch (e) {
+                console.log('WebSocket streaming not available:', e);
+            }
+        }
+
+        function stopStreamingTranscription() {
+            if (streamRecorder && streamRecorder.state !== 'inactive') {
+                try { streamRecorder.stop(); } catch (e) { }
+            }
+            streamRecorder = null;
+            if (streamWs) {
+                try { streamWs.close(); } catch (e) { }
+                streamWs = null;
+            }
+        }
+
         // ===== Event Listeners =====
         recordBtn.addEventListener('click', () => {
             if (!isRecording) {
-                // Show mode selection screen
                 showModeSelection();
             } else if (isPaused) {
                 resumeRecording();
@@ -1545,19 +2459,26 @@
 
         resumeBtn.addEventListener('click', () => { resumeRecording(); });
 
+        // R1.1 — Visibility change → RED interrupted state
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && isRecording && !isPaused) {
-                console.log('App backgrounded - recording continues');
+            if (document.hidden && isRecording && !isPaused && !isInterrupted) {
+                // App went to background — trigger RED state
+                triggerRedState('App was backgrounded');
+            } else if (!document.hidden && isInterrupted) {
+                // Returned — the interrupted overlay is already showing with auto-resume
             }
         });
 
         window.addEventListener('beforeunload', (e) => {
-            if (isRecording) { e.preventDefault(); e.returnValue = 'You have a story being recorded. Are you sure you want to leave?'; }
+            // Save transcript and state — don't stop recording aggressively
+            // Chunks are auto-synced, so just persist for recovery
+            saveRecoveryState();
         });
 
         // ===== Initialize =====
         async function init() {
             await initDB();
+            checkCrashRecovery();
             try {
                 const response = await fetch(`${API_URL}/user/stats`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -1567,7 +2488,16 @@
                     totalTimeSpan.textContent = data.total_duration_formatted || '0:00';
                     chunkCountSpan.textContent = data.total_chunks || 0;
                 }
-            } catch (err) { }
+            } catch (err) { }            // R2.2: Check transcription status (hardware detection)
+            try {
+                const tsResp = await fetch(`${API_URL}/transcription/status`);
+                const tsData = await tsResp.json();
+                const tsBadge = document.getElementById('transcription-badge');
+                tsBadge.textContent = tsData.message || '📝 Transcription after upload';
+            } catch (e) {
+                document.getElementById('transcription-badge').textContent = '📝 Transcription will happen after upload';
+            }
+
             processUploadQueue();
         }
 

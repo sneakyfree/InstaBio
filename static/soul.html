@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2D5016">
+    <title>The Soul — InstaBio</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        :root {
+            --color-primary: #2D5016;
+            --color-primary-light: #3D6B1E;
+            --color-background: #FFF8F0;
+            --color-white: #FFFFFF;
+            --color-text: #1A1A1A;
+            --color-text-light: #4A4A4A;
+            --color-cream: #F5EDE0;
+            --radius: 16px;
+            --touch-min: 64px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 20px;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-background);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .page-header h1 {
+            font-size: 36px;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: var(--color-text-light);
+            font-size: 18px;
+        }
+
+        /* Status Card */
+        .status-card {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .status-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .status-text {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+
+        .status-detail {
+            color: var(--color-text-light);
+            margin-bottom: 20px;
+        }
+
+        /* Activate Button */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: var(--touch-min);
+            padding: 16px 36px;
+            font-size: 22px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: var(--color-white);
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-light);
+            transform: scale(1.02);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: default;
+            transform: none;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            height: 60vh;
+            min-height: 400px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            font-size: 18px;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: var(--color-primary);
+            color: var(--color-white);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.soul {
+            background: var(--color-cream);
+            color: var(--color-text);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .citations {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+            color: var(--color-text-light);
+        }
+
+        .message .citation-badge {
+            display: inline-block;
+            background: rgba(45, 80, 22, 0.1);
+            color: var(--color-primary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            padding: 16px 20px;
+            background: var(--color-cream);
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .typing-indicator.visible {
+            display: block;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--color-primary);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+
+            0%,
+            80%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+
+            40% {
+                transform: translateY(-6px);
+                opacity: 1;
+            }
+        }
+
+        /* Input Area */
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+            border-top: 1px solid var(--color-cream);
+            background: var(--color-background);
+            border-bottom-left-radius: var(--radius);
+            border-bottom-right-radius: var(--radius);
+        }
+
+        .chat-input {
+            flex: 1;
+            min-height: var(--touch-min);
+            padding: 16px;
+            font-size: 18px;
+            border: 2px solid var(--color-cream);
+            border-radius: 12px;
+            background: var(--color-white);
+            resize: none;
+            font-family: inherit;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .send-btn {
+            min-width: var(--touch-min);
+            min-height: var(--touch-min);
+            background: var(--color-primary);
+            color: var(--color-white);
+            border: none;
+            border-radius: 12px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            background: var(--color-primary-light);
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: default;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Not Ready State */
+        .requirements-list {
+            text-align: left;
+            margin: 16px auto;
+            max-width: 400px;
+        }
+
+        .req-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            font-size: 18px;
+            border-bottom: 1px solid var(--color-cream);
+        }
+
+        .req-icon {
+            font-size: 24px;
+        }
+
+        .req-item.met .req-icon {
+            color: #059669;
+        }
+
+        .req-item.unmet .req-icon {
+            color: #9CA3AF;
+        }
+
+        /* === MOBILE RESPONSIVE === */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+                max-width: 100%;
+            }
+
+            .status-card {
+                padding: 20px;
+            }
+
+            .status-card h2 {
+                font-size: 20px;
+            }
+
+            .chat-area {
+                padding: 8px;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 10px 14px;
+                font-size: 15px;
+            }
+
+            .chat-input-bar {
+                padding: 8px;
+                gap: 8px;
+            }
+
+            .chat-input-bar input {
+                font-size: 16px;
+                /* Prevents iOS auto-zoom */
+                min-height: 44px;
+            }
+
+            .chat-input-bar button {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .requirement-item {
+                padding: 12px 0;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/static/i18n.js"></script>
+    <script src="/static/shared.js"></script>
+    <script>renderNav('soul');</script>
+
+    <div class="container">
+        <header class="page-header">
+            <h1>🕊️ The Soul</h1>
+            <p>Talk with an AI grounded in your recorded memories</p>
+        </header>
+
+        <!-- Status / Not Ready -->
+        <div id="status-card" class="status-card">
+            <div class="status-icon" id="status-icon">🕊️</div>
+            <div class="status-text" id="status-text">Checking readiness...</div>
+            <div class="status-detail" id="status-detail"></div>
+            <div class="requirements-list hidden" id="requirements-list"></div>
+            <button class="btn btn-primary" id="activate-btn" onclick="activateSoul()" style="display:none;">
+                ✨ Activate Soul
+            </button>
+        </div>
+
+        <!-- Chat Area (hidden until ready) -->
+        <div id="chat-area" class="chat-area hidden">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message soul">
+                    Hello! I'm here to help you explore your memories. Ask me anything about the stories you've
+                    recorded. 🌿
+                </div>
+            </div>
+            <div class="typing-indicator" id="typing-indicator">
+                <div class="typing-dots"><span></span><span></span><span></span></div>
+            </div>
+            <div class="chat-input-area">
+                <textarea class="chat-input" id="chat-input" placeholder="Ask about your memories..." rows="1"
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+                <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+
+        <!-- R7.7: Cool-Down Banners -->
+        <div id="cooldown-30" class="hidden"
+            style="background:#FEF3C7; border:2px solid #D97706; border-radius:12px; padding:20px; margin-top:16px; text-align:center;">
+            <p style="font-size:18px; color:#92400E;">💚 You've been chatting for 30 minutes. It's okay to take a break.
+                They'll be here whenever you're ready.</p>
+            <button onclick="document.getElementById('cooldown-30').classList.add('hidden')"
+                style="margin-top:8px; padding:10px 20px; background:#D97706; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">Continue
+                Chatting</button>
+        </div>
+        <div id="cooldown-60" class="hidden"
+            style="background:#FEE2E2; border:2px solid #DC2626; border-radius:12px; padding:20px; margin-top:16px; text-align:center;">
+            <p style="font-size:18px; color:#991B1B;">💛 You've been here for over an hour. Please remember to take care
+                of yourself.</p>
+            <p style="font-size:16px; color:#7F1D1D; margin-top:8px;">Need to talk to someone? <a
+                    href="https://www.crisistextline.org/" target="_blank" style="color:#2563EB;">Crisis Text Line</a> ·
+                <a href="https://www.griefshare.org/" target="_blank" style="color:#2563EB;">GriefShare</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('instabio_token');
+        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+        let soulActive = false;
+        let sessionStartTime = null;
+        let cooldownTimer = null;
+
+        async function checkStatus() {
+            try {
+                const resp = await fetch('/api/soul/status', { headers });
+                const data = await resp.json();
+
+                if (data.is_ready) {
+                    document.getElementById('status-icon').textContent = '✅';
+                    document.getElementById('status-text').textContent = 'Soul is Ready';
+                    document.getElementById('status-detail').textContent = 'Your AI companion is ready to chat.';
+                    document.getElementById('activate-btn').style.display = 'inline-flex';
+                } else {
+                    document.getElementById('status-icon').textContent = '🔒';
+                    document.getElementById('status-text').textContent = `${data.readiness_pct || 0}% Ready`;
+                    document.getElementById('status-detail').textContent = data.next_step || 'Keep recording to unlock the Soul.';
+
+                    // Show requirements
+                    const reqList = document.getElementById('requirements-list');
+                    reqList.classList.remove('hidden');
+                    const reqs = data.requirements_met || {};
+                    let html = '';
+                    const reqNames = {
+                        'recordings': '🎙️ Enough recordings',
+                        'biography': '📖 Biography generated',
+                        'voice_clone': '🎤 Voice clone ready',
+                        'avatar': '👤 Avatar ready'
+                    };
+                    for (const [key, label] of Object.entries(reqNames)) {
+                        const met = reqs[key];
+                        html += `<div class="req-item ${met ? 'met' : 'unmet'}">
+                            <span class="req-icon">${met ? '✅' : '⬜'}</span>
+                            <span>${label}</span>
+                        </div>`;
+                    }
+                    reqList.innerHTML = html;
+                }
+            } catch (e) {
+                document.getElementById('status-text').textContent = 'Unable to check status';
+                document.getElementById('status-detail').textContent = 'Please try again later.';
+            }
+        }
+
+        async function activateSoul() {
+            const btn = document.getElementById('activate-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Activating...';
+
+            try {
+                const resp = await fetch('/api/soul/activate', { method: 'POST', headers });
+                const data = await resp.json();
+
+                if (data.success || data.status === 'active') {
+                    soulActive = true;
+                    sessionStartTime = Date.now();
+                    startCooldownTimer();
+                    document.getElementById('status-card').classList.add('hidden');
+                    document.getElementById('chat-area').classList.remove('hidden');
+                } else {
+                    btn.textContent = '❌ ' + (data.message || 'Activation failed');
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                btn.textContent = '❌ Connection error';
+                btn.disabled = false;
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            const messagesDiv = document.getElementById('chat-messages');
+
+            // Add user message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message user';
+            userMsg.textContent = message;
+            messagesDiv.appendChild(userMsg);
+
+            // Show typing
+            document.getElementById('typing-indicator').classList.add('visible');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            document.getElementById('send-btn').disabled = true;
+
+            try {
+                const resp = await fetch('/api/soul/chat', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ message })
+                });
+                const data = await resp.json();
+
+                document.getElementById('typing-indicator').classList.remove('visible');
+
+                const soulMsg = document.createElement('div');
+                soulMsg.className = 'message soul';
+
+                let html = escapeHtml(data.response || data.message || "I couldn't find anything about that in your recordings.");
+
+                // Add citations if present
+                if (data.citations && data.citations.length > 0) {
+                    html += '<div class="citations">📎 Sources: ';
+                    data.citations.forEach(c => {
+                        html += `<span class="citation-badge">${escapeHtml(c.session_id || c.source || 'recording')}</span> `;
+                    });
+                    html += '</div>';
+                }
+
+                soulMsg.innerHTML = html;
+                messagesDiv.appendChild(soulMsg);
+
+                // R7.3: Hear Response button
+                const hearBtn = document.createElement('button');
+                hearBtn.style.cssText = 'background:none; border:1px solid var(--color-primary); color:var(--color-primary); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:14px; margin-top:8px;';
+                hearBtn.textContent = '🔊 Hear Response';
+                hearBtn.onclick = () => {
+                    if ('speechSynthesis' in window) {
+                        speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(data.response || data.message || '');
+                        utterance.rate = 0.85;
+                        speechSynthesis.speak(utterance);
+                    }
+                };
+                messagesDiv.appendChild(hearBtn);
+            } catch (e) {
+                document.getElementById('typing-indicator').classList.remove('visible');
+                const errMsg = document.createElement('div');
+                errMsg.className = 'message soul';
+                errMsg.textContent = '⚠️ Sorry, I had trouble connecting. Please try again.';
+                messagesDiv.appendChild(errMsg);
+            }
+
+            document.getElementById('send-btn').disabled = false;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            input.focus();
+        }
+
+        // R7.7: Cool-down timer
+        function startCooldownTimer() {
+            cooldownTimer = setInterval(() => {
+                if (!sessionStartTime) return;
+                const minutes = (Date.now() - sessionStartTime) / 60000;
+                if (minutes >= 60) {
+                    document.getElementById('cooldown-60').classList.remove('hidden');
+                } else if (minutes >= 30) {
+                    document.getElementById('cooldown-30').classList.remove('hidden');
+                }
+            }, 60000);
+        }
+
+        checkStatus();
+    </script>
+</body>
+
+</html>

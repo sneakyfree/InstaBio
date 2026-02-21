@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111111">
+    <title>Living Room Mode — InstaBio</title>
+    <style>
+        :root {
+            --color-primary: #2D5016;
+            --color-green: #059669;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #111;
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .tv-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .avatar-frame {
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: #222;
+            border: 4px solid var(--color-green);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            box-shadow: 0 0 60px rgba(5, 150, 105, 0.2);
+        }
+
+        .avatar-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-placeholder {
+            font-size: 120px;
+        }
+
+        .name {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        .story-text {
+            font-size: 24px;
+            line-height: 1.8;
+            max-width: 800px;
+            color: #ddd;
+            font-style: italic;
+            margin-bottom: 40px;
+            min-height: 80px;
+        }
+
+        .tv-controls {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .tv-btn {
+            padding: 16px 40px;
+            border-radius: 12px;
+            border: 2px solid var(--color-green);
+            background: transparent;
+            color: var(--color-green);
+            font-size: 22px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tv-btn:hover,
+        .tv-btn:focus {
+            background: var(--color-green);
+            color: #fff;
+        }
+
+        .tv-btn.active {
+            background: var(--color-green);
+            color: #fff;
+        }
+
+        .chat-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+        }
+
+        .chat-area.visible {
+            display: block;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            border: 2px solid #333;
+            background: #222;
+            color: #fff;
+            font-size: 20px;
+        }
+
+        .chat-input:focus {
+            border-color: var(--color-green);
+            outline: none;
+        }
+
+        .chat-send {
+            padding: 16px 32px;
+            background: var(--color-green);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .chat-response {
+            max-width: 800px;
+            margin: 16px auto 0;
+            font-size: 20px;
+            color: #ccc;
+        }
+
+        @media (max-width: 600px) {
+            .avatar-frame {
+                width: 200px;
+                height: 200px;
+            }
+
+            .name {
+                font-size: 24px;
+            }
+
+            .story-text {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tv-container">
+        <div class="avatar-frame">
+            <div class="avatar-placeholder" id="avatar-area">🌿</div>
+        </div>
+        <div class="name" id="tv-name">Loading...</div>
+        <div class="subtitle">InstaBio — Living Room Mode</div>
+        <div class="story-text" id="story-text">"Press Play to hear a story..."</div>
+        <div class="tv-controls">
+            <button class="tv-btn" id="btn-play" onclick="playStory()">▶ Play Story</button>
+            <button class="tv-btn" id="btn-next" onclick="nextStory()">⏭ Next</button>
+            <button class="tv-btn" id="btn-chat" onclick="toggleChat()">💬 Chat with Soul</button>
+        </div>
+    </div>
+
+    <div class="chat-area" id="chat-area">
+        <div class="chat-input-row">
+            <input class="chat-input" id="chat-input" placeholder="Ask a question..."
+                onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="chat-send" onclick="sendChat()">Send</button>
+        </div>
+        <div class="chat-response" id="chat-response"></div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        const params = new URLSearchParams(window.location.search);
+        const shareToken = params.get('share_token') || '';
+        const token = localStorage.getItem('instabio_token');
+        let currentChapter = 0;
+        let chapters = [];
+        const authHeader = shareToken ? {} : { 'Authorization': `Bearer ${token}` };
+
+        async function init() {
+            try {
+                const resp = await fetch(`${API_URL}/biography`, { headers: authHeader });
+                const data = await resp.json();
+                if (data.success && data.biography) {
+                    chapters = data.biography.chapters || [];
+                    document.getElementById('tv-name').textContent = data.biography.title || 'A Life Story';
+                    if (chapters.length > 0) showChapter(0);
+                }
+                const statsResp = await fetch(`${API_URL}/user/stats`, { headers: authHeader });
+                const stats = await statsResp.json();
+                if (stats.first_name) {
+                    document.getElementById('tv-name').textContent = `The Story of ${stats.first_name}`;
+                }
+            } catch (e) {
+                document.getElementById('story-text').textContent = '"Connect to InstaBio to start..."';
+            }
+        }
+
+        function showChapter(idx) {
+            if (idx >= chapters.length) idx = 0;
+            currentChapter = idx;
+            const ch = chapters[idx];
+            const paras = ch.paragraphs || [];
+            const text = paras.map(p => p.text).join(' ').substring(0, 300);
+            document.getElementById('story-text').textContent = `"${text}..."`;
+        }
+
+        function playStory() {
+            if (chapters.length === 0) return;
+            showChapter(currentChapter);
+            // Use browser speech synthesis as fallback
+            const text = document.getElementById('story-text').textContent;
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.85;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function nextStory() {
+            currentChapter = (currentChapter + 1) % Math.max(chapters.length, 1);
+            showChapter(currentChapter);
+        }
+
+        function toggleChat() {
+            const area = document.getElementById('chat-area');
+            area.classList.toggle('visible');
+            if (area.classList.contains('visible')) {
+                document.getElementById('chat-input').focus();
+            }
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+            input.value = '';
+            document.getElementById('chat-response').textContent = 'Thinking...';
+            try {
+                const resp = await fetch(`${API_URL}/soul/chat`, {
+                    method: 'POST',
+                    headers: { ...authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                });
+                const data = await resp.json();
+                document.getElementById('chat-response').textContent = data.response || data.message || 'No response.';
+            } catch (e) {
+                document.getElementById('chat-response').textContent = 'Connection error. Please try again.';
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

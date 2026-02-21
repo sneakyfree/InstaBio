@@ -177,6 +177,91 @@ async def init_db():
             )
         """)
         
+        # Consents table — tracks per-user consent tier acceptance
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS consents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                tier INTEGER NOT NULL,
+                tier_name TEXT NOT NULL,
+                accepted INTEGER NOT NULL DEFAULT 0,
+                accepted_at TEXT,
+                UNIQUE(user_id, tier),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Audit log table — records data access events
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                resource TEXT,
+                detail TEXT,
+                ip_address TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_audit_user
+            ON audit_log(user_id)
+        """)
+
+        # Shares table — biography chapter share links
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS shares (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                chapter_number INTEGER,
+                share_token TEXT UNIQUE NOT NULL,
+                recipient_name TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TEXT,
+                view_count INTEGER DEFAULT 0,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Family members table — steward / family sharing
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS family_members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                member_email TEXT NOT NULL,
+                member_name TEXT,
+                role TEXT NOT NULL DEFAULT 'viewer',
+                access_level TEXT NOT NULL DEFAULT 'read',
+                invite_token TEXT UNIQUE,
+                accepted INTEGER DEFAULT 0,
+                invited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                accepted_at TEXT,
+                UNIQUE(user_id, member_email),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Notifications table
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                message TEXT NOT NULL,
+                read INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        # Safe migration — add steward_email to users
+        await add_column_if_missing(
+            "ALTER TABLE users ADD COLUMN steward_email TEXT DEFAULT ''",
+            "steward_email",
+        )
+
         await db.commit()
         print("✅ Database initialized successfully")
 
@@ -506,3 +591,258 @@ async def get_cache_result(user_id: int, cache_key: str) -> dict | None:
         if row:
             return json.loads(row[0])
         return None
+
+
+# ----- Consent Management -----
+
+CONSENT_TIERS = {
+    0: "account_creation",
+    1: "recording",
+    2: "biography_processing",
+    3: "voice_clone",
+    4: "avatar",
+    5: "soul_ai",
+}
+
+async def save_consent(user_id: int, tier: int, accepted: bool) -> None:
+    """Save or update consent for a specific tier."""
+    tier_name = CONSENT_TIERS.get(tier, f"tier_{tier}")
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            INSERT INTO consents (user_id, tier, tier_name, accepted, accepted_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, tier) DO UPDATE SET
+                accepted = excluded.accepted,
+                accepted_at = excluded.accepted_at
+            """,
+            (user_id, tier, tier_name, 1 if accepted else 0,
+             datetime.now(UTC).isoformat() if accepted else None)
+        )
+        await db.commit()
+
+async def get_user_consents(user_id: int) -> list:
+    """Get all consent records for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM consents WHERE user_id = ? ORDER BY tier",
+            (user_id,)
+        )
+        rows = await cursor.fetchall()
+        # Return all tiers, filling in defaults for missing ones
+        existing = {row['tier']: dict(row) for row in rows}
+        result = []
+        for tier, name in CONSENT_TIERS.items():
+            if tier in existing:
+                result.append(existing[tier])
+            else:
+                result.append({
+                    'user_id': user_id, 'tier': tier, 'tier_name': name,
+                    'accepted': 0, 'accepted_at': None
+                })
+        return result
+
+
+# ----- Audit Logging -----
+
+async def log_audit(user_id: int, action: str, resource: str = None,
+                    detail: str = None, ip_address: str = None) -> None:
+    """Log an audit event."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            INSERT INTO audit_log (user_id, action, resource, detail, ip_address)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, action, resource, detail, ip_address)
+        )
+        await db.commit()
+
+async def get_audit_log(user_id: int, limit: int = 50) -> list:
+    """Get recent audit log entries for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT * FROM audit_log WHERE user_id = ?
+            ORDER BY created_at DESC LIMIT ?
+            """,
+            (user_id, limit)
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+# ----- Share Links -----
+
+async def create_share_link(user_id: int, chapter_number: int, share_token: str,
+                            recipient_name: str = None, expires_at: str = None) -> dict:
+    """Create a share link for a biography chapter."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            INSERT INTO shares (user_id, chapter_number, share_token, recipient_name, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, chapter_number, share_token, recipient_name, expires_at)
+        )
+        await db.commit()
+        return {
+            'share_token': share_token,
+            'chapter_number': chapter_number,
+            'recipient_name': recipient_name,
+        }
+
+async def get_share_link(share_token: str) -> dict | None:
+    """Get a share link by token."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT s.*, u.first_name FROM shares s JOIN users u ON s.user_id = u.id WHERE s.share_token = ?",
+            (share_token,)
+        )
+        row = await cursor.fetchone()
+        if row:
+            # Increment view count
+            await db.execute(
+                "UPDATE shares SET view_count = view_count + 1 WHERE share_token = ?",
+                (share_token,)
+            )
+            await db.commit()
+            return dict(row)
+        return None
+
+
+# ----- Family Members -----
+
+async def add_family_member(user_id: int, member_email: str, member_name: str = None,
+                            role: str = 'viewer', invite_token: str = None) -> dict:
+    """Invite a family member."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            INSERT INTO family_members (user_id, member_email, member_name, role, invite_token)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, member_email) DO UPDATE SET
+                member_name = COALESCE(excluded.member_name, family_members.member_name),
+                role = excluded.role
+            """,
+            (user_id, member_email.lower(), member_name, role, invite_token)
+        )
+        await db.commit()
+        return {'email': member_email, 'name': member_name, 'role': role}
+
+async def get_family_members(user_id: int) -> list:
+    """Get all family members for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM family_members WHERE user_id = ? ORDER BY invited_at",
+            (user_id,)
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+async def remove_family_member(user_id: int, member_id: int) -> bool:
+    """Remove a family member. Returns True if deleted."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT id FROM family_members WHERE id = ? AND user_id = ?",
+            (member_id, user_id)
+        )
+        if not await cursor.fetchone():
+            return False
+        await db.execute("DELETE FROM family_members WHERE id = ?", (member_id,))
+        await db.commit()
+        return True
+
+async def set_steward(user_id: int, steward_email: str) -> None:
+    """Set the steward for a user's account."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET steward_email = ? WHERE id = ?",
+            (steward_email.lower(), user_id)
+        )
+        await db.commit()
+
+
+# ----- Notification Management -----
+
+async def create_notification(user_id: int, notif_type: str, title: str, message: str) -> int:
+    """Create a notification for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            """
+            INSERT INTO notifications (user_id, type, title, message)
+            VALUES (?, ?, ?, ?)
+            """,
+            (user_id, notif_type, title, message)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def get_notifications(user_id: int, unread_only: bool = False) -> list:
+    """Get notifications for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        query = "SELECT * FROM notifications WHERE user_id = ?"
+        if unread_only:
+            query += " AND read = 0"
+        query += " ORDER BY created_at DESC LIMIT 50"
+        cursor = await db.execute(query, (user_id,))
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+async def mark_notification_read(notification_id: int, user_id: int) -> bool:
+    """Mark a notification as read."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT id FROM notifications WHERE id = ? AND user_id = ?",
+            (notification_id, user_id)
+        )
+        if not await cursor.fetchone():
+            return False
+        await db.execute("UPDATE notifications SET read = 1 WHERE id = ?", (notification_id,))
+        await db.commit()
+        return True
+
+
+# ----- Account Deletion -----
+
+async def delete_user_account(user_id: int) -> bool:
+    """Delete a user account and ALL associated data (cascading)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Verify user exists
+        cursor = await db.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+        if not await cursor.fetchone():
+            return False
+
+        # Delete all associated data (order matters for foreign keys)
+        await db.execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM family_members WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM shares WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM audit_log WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM consents WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM cache_results WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM processing_status WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM interview_sessions WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM transcripts WHERE user_id = ?", (user_id,))
+        # Delete audio chunks via sessions
+        await db.execute("""
+            DELETE FROM audio_chunks WHERE session_id IN (
+                SELECT id FROM recording_sessions WHERE user_id = ?
+            )
+        """, (user_id,))
+        await db.execute("DELETE FROM recording_sessions WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        await db.commit()
+        return True
+
+
+# ----- Video Hours Helper -----
+
+async def get_user_video_hours(user_id: int) -> float:
+    """Get total video recording hours. Placeholder — returns 0 until video marking is persisted."""
+    return 0.0
+

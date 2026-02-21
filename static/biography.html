@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2D5016">
     <title>Your Biography — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
@@ -455,6 +455,7 @@
 
 <body>
     <!-- Shared navigation -->
+    <script src="/static/i18n.js"></script>
     <script src="/static/shared.js"></script>
     <script>renderNav('biography');</script>
 
@@ -508,10 +509,27 @@
                     <!-- Filled by JS -->
                 </div>
 
-                <div style="text-align: center; margin-top: 48px;">
-                    <button class="share-btn" onclick="shareBiography()">
-                        📤 Share with Family
-                    </button>
+                <div
+                    style="text-align: center; margin-top: 48px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+                    <button class="share-btn" onclick="shareBiography()">📤 Share Chapter</button>
+                    <button class="share-btn" onclick="exportPDF()" style="background: #92400E;">📄 Export PDF</button>
+                    <button class="share-btn" onclick="exportPDF('print')" style="background: #7C3AED;">📖 Print-Ready
+                        PDF</button>
+                    <button class="share-btn" onclick="exportEPUB()" style="background: #2563EB;">📱 Export
+                        EPUB</button>
+                    <button class="share-btn" onclick="reviewBiography(true)" style="background: #059669;">✅
+                        Approve</button>
+                    <button class="share-btn" onclick="reviewBiography(false)"
+                        style="background: var(--color-text-light);">✏️ Request Changes</button>
+                </div>
+
+                <!-- R3.4: Follow-up Questions -->
+                <div id="follow-up-section" class="hidden"
+                    style="margin-top:32px; padding:24px; background:#FEF3C7; border-radius:12px;">
+                    <h3 style="color:#92400E; margin-bottom:12px;">💡 Help us fill in the gaps</h3>
+                    <p style="color:#92400E; font-size:16px; margin-bottom:16px;">Recording answers to these questions
+                        will enrich your biography:</p>
+                    <ul id="follow-up-list" style="list-style:none; padding:0;"></ul>
                 </div>
             </div>
         </main>
@@ -523,6 +541,10 @@
         <h4>📎 Source Recording</h4>
         <div class="original-text" id="citation-text">
             "Original words from the recording..."
+        </div>
+        <!-- R3.1: Audio citation playback -->
+        <div id="citation-audio-container" style="margin:12px 0; display:none;">
+            <audio id="citation-audio" controls style="width:100%;"></audio>
         </div>
         <p style="font-size: 14px; color: var(--color-text-light);">
             <span id="citation-session">Session: Unknown</span>
@@ -654,6 +676,8 @@
 
             const chapter = currentBiography.chapters[chapterIdx];
             const para = chapter.paragraphs[paraIdx];
+            const audioContainer = document.getElementById('citation-audio-container');
+            const audioEl = document.getElementById('citation-audio');
 
             if (para.citations && para.citations.length > 0) {
                 const citation = para.citations[0];
@@ -661,11 +685,20 @@
                     citation.original_text || '"Original recording text..."';
                 document.getElementById('citation-session').textContent =
                     `Session: ${citation.session_uuid || 'Recording session'}`;
+
+                // R3.1: Load audio chunk for playback
+                if (citation.session_uuid && citation.chunk_index !== undefined) {
+                    audioEl.src = `${API_URL}/recordings/${citation.session_uuid}/chunk/${citation.chunk_index}`;
+                    audioContainer.style.display = 'block';
+                } else {
+                    audioContainer.style.display = 'none';
+                }
             } else {
                 document.getElementById('citation-text').textContent =
                     '"This passage is based on your recordings."';
                 document.getElementById('citation-session').textContent =
                     'Tap any paragraph to see its source.';
+                audioContainer.style.display = 'none';
             }
 
             citationPopup.classList.add('show');
@@ -673,6 +706,9 @@
 
         function closeCitation() {
             citationPopup.classList.remove('show');
+            const audioEl = document.getElementById('citation-audio');
+            audioEl.pause();
+            audioEl.src = '';
         }
 
         // Close citation on outside click
@@ -701,20 +737,104 @@
         });
 
         function shareBiography() {
-            if (navigator.share) {
-                navigator.share({
-                    title: currentBiography?.title || 'My Biography',
-                    text: 'Check out my life story on InstaBio!',
-                    url: window.location.href
+            // Share current chapter or entire biography
+            const activeChapter = document.querySelector('.chapter-link.active');
+            const chapterNum = activeChapter ? parseInt(activeChapter.querySelector('.chapter-number')?.textContent) || 1 : 1;
+
+            fetch(`${API_URL}/biography/share`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chapter_number: chapterNum })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.share_url) {
+                        const fullUrl = window.location.origin + data.share_url;
+                        if (navigator.share) {
+                            navigator.share({
+                                title: currentBiography?.title || 'My Biography',
+                                text: `Read Chapter ${chapterNum} of my life story on InstaBio!`,
+                                url: fullUrl
+                            });
+                        } else {
+                            navigator.clipboard.writeText(fullUrl);
+                            alert(`Share link copied!\n\n${fullUrl}`);
+                        }
+                    } else {
+                        alert('Unable to create share link. Please try again.');
+                    }
+                })
+                .catch(() => alert('Connection error. Please try again.'));
+        }
+
+        function exportPDF(format) {
+            const fmt = format || 'standard';
+            const url = `${API_URL}/biography/export/pdf?format=${fmt}`;
+            fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `biography_${fmt}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(() => {
+                    alert('PDF export failed. Falling back to print...');
+                    window.print();
                 });
-            } else {
-                alert('Share link copied to clipboard!');
-                navigator.clipboard.writeText(window.location.href);
-            }
+        }
+
+        function exportEPUB() {
+            fetch(`${API_URL}/biography/export/epub`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(r => r.blob())
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'biography.epub';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(() => alert('EPUB export failed. Please try again.'));
+        }
+
+        function reviewBiography(approved) {
+            const notes = approved ? null : prompt('What changes would you like?');
+            fetch(`${API_URL}/biography/review`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ approved, notes })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    alert(data.message || 'Review submitted!');
+                })
+                .catch(() => alert('Connection error.'));
         }
 
         // Initialize
         loadBiography();
+
+        // R3.4: Load follow-up questions
+        fetch(`${API_URL}/biography/follow-up-questions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.questions && data.questions.length > 0) {
+                    const list = document.getElementById('follow-up-list');
+                    data.questions.forEach(q => {
+                        const li = document.createElement('li');
+                        li.style.cssText = 'padding:12px 16px; margin-bottom:8px; background:white; border-radius:8px; display:flex; align-items:center; gap:12px;';
+                        li.innerHTML = `<span style="font-size:24px;">❓</span><span>${q.question}</span>`;
+                        list.appendChild(li);
+                    });
+                    document.getElementById('follow-up-section').classList.remove('hidden');
+                }
+            })
+            .catch(() => { });
     </script>
 </body>
 

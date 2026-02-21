@@ -1,6 +1,8 @@
 """
-InstaBio Soul Status Module
+InstaBio Soul Module
 Tracks readiness for the "Soul" - the interactive AI clone.
+Implements RAG-based grounded conversation using transcript keyword search
+and LLM generation via the existing llm_client.
 
 Soul Requirements:
 - 10+ hours of recording (for personality & content)
@@ -11,8 +13,13 @@ The Soul is the crown jewel - an AI that knows your stories,
 speaks in your voice, and can have conversations with family.
 """
 
+import re
+import logging
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -50,182 +57,135 @@ def calculate_soul_status(
 ) -> SoulStatus:
     """
     Calculate Soul readiness based on all requirements.
-    
+
     Args:
         recording_hours: Total hours of audio recordings
         biography_status: Status of biography generation
-        biography_chapters_ready: Number of biography chapters completed
-        biography_chapters_total: Total planned biography chapters
+        biography_chapters_ready: Number of biography chapters generated
+        biography_chapters_total: Target number of chapters
         voice_clone_ready: Whether voice clone is available
         avatar_ready: Whether avatar is available
-        
-    Returns:
-        SoulStatus with requirement checklist and overall progress
     """
     requirements = []
-    requirements_met = []
-    requirements_remaining = []
-    
-    # ----- Requirement 1: Recording Hours (10+ hours) -----
-    recording_target = 10.0
-    recording_progress = min(100, int((recording_hours / recording_target) * 100))
-    recording_met = recording_hours >= recording_target
-    
-    if recording_met:
-        recording_detail = f"✓ {recording_hours:.1f} hours recorded"
-        requirements_met.append("recording_complete")
-    elif recording_hours >= 1:
-        recording_detail = f"{recording_hours:.1f} / {recording_target} hours ({recording_target - recording_hours:.1f} to go)"
-        requirements_met.append("recording_started")
-    else:
-        recording_detail = f"Just getting started! {recording_target - recording_hours:.1f} hours to go"
-    
+
+    # Requirement 1: Recording hours (10+ hours for full Soul)
+    rec_met = recording_hours >= 10
+    rec_pct = min(int((recording_hours / 10) * 100), 100)
     requirements.append(SoulRequirement(
         id="recording",
-        name="10+ Hours of Stories",
-        description="Record at least 10 hours of your life stories for the Soul to know you deeply",
-        is_met=recording_met,
-        progress_pct=recording_progress,
-        progress_detail=recording_detail,
+        name="Recording Hours",
+        description="Record 10+ hours of your life story",
+        is_met=rec_met,
+        progress_pct=rec_pct,
+        progress_detail=f"{recording_hours:.1f}/10 hours recorded",
     ))
-    
-    if not recording_met:
-        requirements_remaining.append("recording_complete")
-    
-    # ----- Requirement 2: Biography Generated -----
-    if biography_status == 'ready' and biography_chapters_ready >= 3:
-        bio_met = True
-        bio_progress = 100
-        bio_detail = f"✓ {biography_chapters_ready} chapters ready"
-        requirements_met.append("biography_ready")
-    elif biography_status == 'processing':
-        bio_met = False
-        bio_progress = int((biography_chapters_ready / max(biography_chapters_total, 1)) * 80 + 20)
-        bio_detail = f"Processing... {biography_chapters_ready}/{biography_chapters_total} chapters"
-        requirements_met.append("biography_started")
-        requirements_remaining.append("biography_ready")
-    elif biography_chapters_ready > 0:
-        bio_met = False
-        bio_progress = int((biography_chapters_ready / max(biography_chapters_total, 1)) * 80)
-        bio_detail = f"{biography_chapters_ready}/{biography_chapters_total} chapters generated"
-        requirements_remaining.append("biography_ready")
-    else:
-        bio_met = False
-        bio_progress = 0
-        bio_detail = "Not started yet — record more stories first!"
-        requirements_remaining.append("biography_ready")
-    
+
+    # Requirement 2: Biography generated
+    bio_met = biography_status == "ready"
+    bio_pct = 0
+    if biography_status == "processing":
+        bio_pct = int((biography_chapters_ready / max(biography_chapters_total, 1)) * 80)
+    elif biography_status == "ready":
+        bio_pct = 100
     requirements.append(SoulRequirement(
         id="biography",
-        name="Biography Generated",
-        description="Your life story organized into chapters helps the Soul understand your journey",
+        name="Biography",
+        description="Generate your life biography from recordings",
         is_met=bio_met,
-        progress_pct=bio_progress,
-        progress_detail=bio_detail,
+        progress_pct=bio_pct,
+        progress_detail=(
+            f"{biography_chapters_ready}/{biography_chapters_total} chapters"
+            if biography_status != "none"
+            else "Not started"
+        ),
     ))
-    
-    # ----- Requirement 3: Voice Clone Ready -----
-    if voice_clone_ready:
-        voice_met = True
-        voice_progress = 100
-        voice_detail = "✓ Voice clone ready"
-        requirements_met.append("voice_ready")
-    elif recording_hours >= 1:
-        voice_met = False
-        voice_progress = 50
-        voice_detail = "Voice clone available but not activated"
-        requirements_remaining.append("voice_ready")
-    else:
-        voice_met = False
-        voice_progress = int((recording_hours / 1.0) * 50)
-        voice_detail = f"Need {max(0, 1 - recording_hours):.1f} more hours for basic voice"
-        requirements_remaining.append("voice_ready")
-    
+
+    # Requirement 3: Voice clone
+    vc_met = voice_clone_ready
+    vc_pct = 100 if vc_met else min(int((recording_hours / 1) * 100), 99)
     requirements.append(SoulRequirement(
-        id="voice",
+        id="voice_clone",
         name="Voice Clone",
-        description="Your voice clone lets the Soul speak as you",
-        is_met=voice_met,
-        progress_pct=voice_progress,
-        progress_detail=voice_detail,
+        description="Create a clone of your voice (1+ hours)",
+        is_met=vc_met,
+        progress_pct=vc_pct,
+        progress_detail="Ready!" if vc_met else f"{recording_hours:.1f}/1 hours needed",
     ))
-    
-    # ----- Optional Bonus: Avatar -----
-    if avatar_ready:
-        requirements_met.append("avatar_ready")
-    
+
+    # Requirement 4: Avatar (optional but contributes to readiness)
+    av_met = avatar_ready
+    av_pct = 100 if av_met else 0
     requirements.append(SoulRequirement(
         id="avatar",
-        name="Avatar (Optional)",
-        description="An avatar lets the Soul appear visually when talking",
-        is_met=avatar_ready,
-        progress_pct=100 if avatar_ready else 0,
-        progress_detail="✓ Avatar ready" if avatar_ready else "Upload photos to create your avatar",
+        name="Avatar",
+        description="Upload a photo for your visual avatar",
+        is_met=av_met,
+        progress_pct=av_pct,
+        progress_detail="Ready!" if av_met else "Upload a photo",
     ))
-    
-    # ----- Calculate Overall Readiness -----
-    # Recording = 40%, Biography = 35%, Voice = 25% (Avatar is bonus)
-    core_requirements_pct = (
-        recording_progress * 0.40 +
-        bio_progress * 0.35 +
-        voice_progress * 0.25
-    )
-    readiness_pct = int(core_requirements_pct)
-    
+
+    # Calculate overall readiness
+    # Weights: recording 40%, biography 30%, voice 20%, avatar 10%
+    weights = {"recording": 40, "biography": 30, "voice_clone": 20, "avatar": 10}
+    pcts = {r.id: r.progress_pct for r in requirements}
+    readiness_pct = (
+        pcts["recording"] * weights["recording"]
+        + pcts["biography"] * weights["biography"]
+        + pcts["voice_clone"] * weights["voice_clone"]
+        + pcts["avatar"] * weights["avatar"]
+    ) // 100
+
     # Determine tier
-    if readiness_pct >= 100:
-        tier = "Ready"
-        tier_description = "Your Soul is ready to awaken!"
-        is_ready = True
-    elif readiness_pct >= 75:
-        tier = "Almost There"
-        tier_description = "Just a bit more and your Soul will be complete"
-        is_ready = False
-    elif readiness_pct >= 50:
-        tier = "Growing"
-        tier_description = "Your Soul is taking shape"
-        is_ready = False
-    elif readiness_pct >= 25:
-        tier = "Emerging"
-        tier_description = "The foundation of your Soul is being built"
-        is_ready = False
-    else:
-        tier = "Beginning"
-        tier_description = "Your Soul's journey has just begun"
-        is_ready = False
-    
-    # Determine next step
-    if not recording_met:
-        remaining_hours = recording_target - recording_hours
-        next_step = f"Record {remaining_hours:.1f} more hours of stories"
-    elif not bio_met:
-        next_step = "Generate your biography to organize your memories"
-    elif not voice_met:
-        next_step = "Activate your voice clone"
-    else:
-        next_step = "Your Soul is ready! Family members can now have conversations with your AI."
-    
-    # Encouraging message
-    if readiness_pct < 25:
-        encouraging = "Every story you record brings your Soul closer to life. Keep going!"
-    elif readiness_pct < 50:
-        encouraging = "You're making great progress! Your Soul is learning who you are."
-    elif readiness_pct < 75:
-        encouraging = "Wonderful! Your Soul is really starting to take shape."
+    met = [r.id for r in requirements if r.is_met]
+    remaining = [r.id for r in requirements if not r.is_met]
+    is_ready = len(remaining) == 0
+
+    if readiness_pct < 10:
+        tier = "Dormant"
+        tier_desc = "The Soul needs more of your story. Keep recording!"
+    elif readiness_pct < 40:
+        tier = "Awakening"
+        tier_desc = "Your Soul is beginning to take shape."
+    elif readiness_pct < 70:
+        tier = "Forming"
+        tier_desc = "Your Soul knows many of your stories now."
     elif readiness_pct < 100:
-        encouraging = "So close! Just a few more steps and your legacy will be complete."
+        tier = "Almost Ready"
+        tier_desc = "Just a few more pieces and your Soul will be complete."
     else:
-        encouraging = "Your Soul is alive! Your family can now talk to you forever."
-    
+        tier = "Alive"
+        tier_desc = "Your Soul is ready! Family can talk to you anytime."
+
+    # Next step
+    if not rec_met:
+        next_step = f"Record {max(10 - recording_hours, 0):.1f} more hours of your story."
+    elif not bio_met:
+        next_step = "Generate your biography from the Progress page."
+    elif not vc_met:
+        next_step = "Your voice clone is almost ready — keep recording!"
+    elif not av_met:
+        next_step = "Upload a photo to give your Soul a face."
+    else:
+        next_step = "Your Soul is complete! Share it with family."
+
+    # Encouraging message
+    messages = {
+        "Dormant": "Every word you record brings your Soul closer to life.",
+        "Awakening": "Your stories are taking root. Keep going!",
+        "Forming": "Family will be amazed — your Soul already knows so much.",
+        "Almost Ready": "You're so close! Just a little more and your legacy is forever.",
+        "Alive": "Your Soul is alive. Your family can hear your stories anytime.",
+    }
+
     return SoulStatus(
         readiness_pct=readiness_pct,
         tier=tier,
-        tier_description=tier_description,
+        tier_description=tier_desc,
         requirements=requirements,
-        requirements_met=requirements_met,
-        requirements_remaining=requirements_remaining,
+        requirements_met=met,
+        requirements_remaining=remaining,
         next_step=next_step,
-        encouraging_message=encouraging,
+        encouraging_message=messages.get(tier, ""),
         is_ready=is_ready,
     )
 
@@ -240,28 +200,24 @@ def get_soul_status_dict(
 ) -> dict:
     """Get Soul status as a dictionary for API responses."""
     status = calculate_soul_status(
-        recording_hours=recording_hours,
-        biography_status=biography_status,
-        biography_chapters_ready=biography_chapters_ready,
-        biography_chapters_total=biography_chapters_total,
-        voice_clone_ready=voice_clone_ready,
-        avatar_ready=avatar_ready,
+        recording_hours, biography_status,
+        biography_chapters_ready, biography_chapters_total,
+        voice_clone_ready, avatar_ready,
     )
-    
     return {
         "readiness_pct": status.readiness_pct,
         "tier": status.tier,
         "tier_description": status.tier_description,
         "requirements": [
             {
-                "id": req.id,
-                "name": req.name,
-                "description": req.description,
-                "is_met": req.is_met,
-                "progress_pct": req.progress_pct,
-                "progress_detail": req.progress_detail,
+                "id": r.id,
+                "name": r.name,
+                "description": r.description,
+                "is_met": r.is_met,
+                "progress_pct": r.progress_pct,
+                "progress_detail": r.progress_detail,
             }
-            for req in status.requirements
+            for r in status.requirements
         ],
         "requirements_met": status.requirements_met,
         "requirements_remaining": status.requirements_remaining,
@@ -271,48 +227,231 @@ def get_soul_status_dict(
     }
 
 
-# ----- Placeholder for Soul interaction -----
+# ---------------------------------------------------------------------------
+# Soul RAG — keyword-based retrieval + LLM grounded chat
+# ---------------------------------------------------------------------------
+
+# In-memory keyword index per user:  user_id → { keyword → [transcript_chunk] }
+_soul_indexes: Dict[int, Dict[str, List[str]]] = {}
+_soul_active: Dict[int, bool] = {}
+
+_STOP_WORDS = {
+    "the", "a", "an", "is", "was", "are", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "shall",
+    "should", "may", "might", "must", "can", "could", "and", "but", "or",
+    "nor", "not", "so", "yet", "for", "at", "by", "from", "in", "into",
+    "of", "on", "to", "with", "about", "it", "its", "i", "me", "my",
+    "we", "our", "you", "your", "he", "she", "his", "her", "they",
+    "them", "their", "this", "that", "these", "those", "what", "which",
+    "who", "whom", "how", "when", "where", "why", "if", "then", "than",
+    "just", "very", "really", "like", "also", "well", "oh", "yeah",
+    "um", "uh", "okay", "ok",
+}
+
+
+def _tokenize(text: str) -> List[str]:
+    """Simple whitespace tokenizer with stop-word removal."""
+    return [
+        w for w in re.findall(r"[a-z']+", text.lower())
+        if len(w) > 2 and w not in _STOP_WORDS
+    ]
+
+
+def _chunk_text(text: str, chunk_size: int = 300) -> List[str]:
+    """Split text into overlapping chunks of roughly *chunk_size* words."""
+    words = text.split()
+    chunks = []
+    step = max(chunk_size // 2, 50)
+    for i in range(0, len(words), step):
+        chunk = " ".join(words[i : i + chunk_size])
+        if chunk.strip():
+            chunks.append(chunk.strip())
+    return chunks
+
+
+def _build_index(transcripts: List[str]) -> Dict[str, List[str]]:
+    """Build a simple inverted keyword index over transcript chunks."""
+    index: Dict[str, List[str]] = defaultdict(list)
+    for text in transcripts:
+        for chunk in _chunk_text(text):
+            for token in set(_tokenize(chunk)):
+                index[token].append(chunk)
+    return dict(index)
+
+
+def _search_index(index: Dict[str, List[str]], query: str, top_k: int = 5) -> List[str]:
+    """Return the *top_k* most relevant chunks for *query* by keyword overlap."""
+    tokens = _tokenize(query)
+    if not tokens:
+        return []
+
+    scores: Dict[int, float] = {}  # chunk_id → score
+    chunk_list: List[str] = []
+    seen: set = set()
+
+    for token in tokens:
+        for chunk in index.get(token, []):
+            cid = id(chunk)
+            if cid not in seen:
+                seen.add(cid)
+                chunk_list.append(chunk)
+                scores[cid] = 0
+            scores[cid] += 1
+
+    # Sort by score descending
+    ranked = sorted(chunk_list, key=lambda c: scores.get(id(c), 0), reverse=True)
+    return ranked[:top_k]
+
+
+# ----- Public API -----
 
 async def activate_soul(user_id: int) -> dict:
     """
-    Placeholder for Soul activation.
-    
-    In production, this would:
-    1. Build RAG index from transcripts
-    2. Fine-tune LoRA on user's speech patterns
-    3. Configure voice clone integration
-    4. Set up family access controls
-    
-    For now, returns a mock response.
+    Activate the Soul for a user by building a keyword index
+    over all their transcripts.
+
+    In production this would also:
+    - Build a vector embedding index
+    - Fine-tune a LoRA on speech patterns
+    - Configure voice clone + avatar integration
+
+    For MVP, we build a simple keyword index that enables
+    grounded retrieval-augmented conversation.
     """
+    from . import database as db
+
+    transcripts = await db.get_user_transcripts(user_id)
+    if not transcripts:
+        return {
+            "status": "error",
+            "message": "No transcripts found. Record some stories first!",
+            "is_active": False,
+        }
+
+    texts = [t["text"] for t in transcripts if t.get("text")]
+    if not texts:
+        return {
+            "status": "error",
+            "message": "No transcript text found. Record some stories first!",
+            "is_active": False,
+        }
+
+    # Build keyword index
+    index = _build_index(texts)
+    _soul_indexes[user_id] = index
+    _soul_active[user_id] = True
+
+    total_chunks = sum(len(v) for v in index.values())
+    logger.info(
+        "Soul activated for user %d: %d transcripts, %d keywords, %d chunks indexed",
+        user_id, len(texts), len(index), total_chunks,
+    )
+
     return {
-        "status": "pending",
-        "message": "Soul activation coming soon! We're building the AI that will carry your legacy.",
-        "features_planned": [
-            "Conversational AI grounded in your stories",
-            "Never invents memories — only uses what you recorded",
-            "Speaks in your voice",
-            "Family access controls",
-        ],
-        "api_ready": False,
+        "status": "active",
+        "message": "Your Soul is ready! Family can start asking questions.",
+        "is_active": True,
+        "transcripts_indexed": len(texts),
+        "keywords_indexed": len(index),
     }
 
 
-async def chat_with_soul(user_id: int, message: str, family_member_id: Optional[int] = None) -> dict:
+async def chat_with_soul(
+    user_id: int,
+    message: str,
+    family_member_id: Optional[int] = None,
+) -> dict:
     """
-    Placeholder for Soul conversation.
-    
-    In production, this would:
-    1. Process the message
-    2. Search RAG index for relevant memories
-    3. Generate response in user's style
-    4. Convert to speech using voice clone
-    
-    For now, returns a mock response.
+    Chat with the Soul.  Uses keyword RAG to find relevant transcript
+    chunks, then sends them + the question to the LLM with strict
+    grounding rules (no hallucination).
+
+    Args:
+        user_id:  The user whose Soul to query.
+        message:  The family member's question.
+        family_member_id:  Optional ID for audit logging.
+
+    Returns:
+        dict with ``response``, ``citations``, and ``status``.
     """
+    from .llm_client import get_llm_client
+
+    # Check if soul is active
+    if not _soul_active.get(user_id):
+        return {
+            "status": "inactive",
+            "response": (
+                "My Soul hasn't been activated yet. "
+                "Go to the Progress page and activate it first!"
+            ),
+            "citations": [],
+        }
+
+    index = _soul_indexes.get(user_id, {})
+    if not index:
+        return {
+            "status": "error",
+            "response": "Something went wrong — my memory index is empty.",
+            "citations": [],
+        }
+
+    # Retrieve relevant chunks
+    relevant_chunks = _search_index(index, message, top_k=5)
+
+    # Build the prompt with strict grounding rules
+    if relevant_chunks:
+        context = "\n\n---\n\n".join(relevant_chunks)
+        system_prompt = (
+            "You are embodying a real person based ONLY on their recorded oral history. "
+            "You speak in first person, using their vocabulary and speaking style.\n\n"
+            "ABSOLUTE RULES:\n"
+            "1. ONLY use information from the CONTEXT below. NEVER invent memories.\n"
+            "2. If the context does not contain relevant information, say something like: "
+            "\"You know, I don't think I ever talked about that. "
+            "Ask me about something else!\"\n"
+            "3. Speak warmly and naturally, as if chatting with family.\n"
+            "4. Keep responses 2-4 sentences unless the topic warrants more.\n"
+            "5. NEVER provide medical, legal, or financial advice.\n"
+            "6. If asked if you are an AI, say: \"I'm an AI built from Grandma's recordings. "
+            "I try to answer the way she would, based on what she told me.\"\n\n"
+            f"CONTEXT FROM RECORDINGS:\n{context}"
+        )
+    else:
+        system_prompt = (
+            "You are embodying a real person based on their recorded oral history. "
+            "However, NO relevant recordings were found for this question. "
+            "Respond warmly and say you don't remember talking about that topic. "
+            "Suggest they ask about something else."
+        )
+
+    llm = get_llm_client()
+    response = await llm.generate(
+        prompt=message,
+        system=system_prompt,
+        temperature=0.7,
+        max_tokens=512,
+    )
+
+    if not response.success:
+        return {
+            "status": "error",
+            "response": (
+                "Oh dear, I'm having trouble thinking right now. "
+                "Can you try asking again?"
+            ),
+            "citations": [],
+            "error": response.error,
+        }
+
+    # Build citation snippets (first 100 chars of each used chunk)
+    citations = [
+        {"snippet": chunk[:100] + "..." if len(chunk) > 100 else chunk}
+        for chunk in relevant_chunks
+    ]
+
     return {
-        "status": "not_implemented",
-        "message": "Soul conversations coming soon!",
-        "response": None,
-        "audio_url": None,
+        "status": "ok",
+        "response": response.text,
+        "citations": citations,
+        "model": response.model,
     }

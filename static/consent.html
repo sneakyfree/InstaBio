@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2D5016">
+    <title>Privacy & Consent — InstaBio</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        :root {
+            --color-primary: #2D5016;
+            --color-background: #FFF8F0;
+            --color-white: #FFFFFF;
+            --color-text: #1B3409;
+            --color-text-light: #4A4A4A;
+            --radius: 16px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-background);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: var(--color-text-light);
+            font-size: 18px;
+        }
+
+        .section {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .section h2 {
+            font-size: 22px;
+            color: var(--color-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0ebe5;
+        }
+
+        .toggle-row:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-label {
+            font-size: 17px;
+            max-width: 60%;
+        }
+
+        .toggle-label .desc {
+            font-size: 14px;
+            color: var(--color-text-light);
+            margin-top: 4px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #ccc;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .slider::before {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input:checked+.slider {
+            background: var(--color-primary);
+        }
+
+        .toggle-switch input:checked+.slider::before {
+            transform: translateX(26px);
+        }
+
+        .danger-zone {
+            border: 2px solid #DC2626;
+            margin-top: 32px;
+        }
+
+        .danger-zone h2 {
+            color: #DC2626;
+        }
+
+        .danger-btn {
+            display: inline-block;
+            padding: 14px 28px;
+            background: #DC2626;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        .danger-btn:hover {
+            background: #991B1B;
+        }
+
+        .export-btn {
+            display: inline-block;
+            padding: 14px 28px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        .success-msg {
+            color: #059669;
+            font-weight: 600;
+            display: none;
+            margin-top: 8px;
+        }
+
+        /* === MOBILE RESPONSIVE === */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+                max-width: 100%;
+            }
+
+            .consent-card {
+                padding: 16px;
+            }
+
+            .toggle-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .toggle-row label {
+                font-size: 15px;
+            }
+
+            .biometric-notice {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .danger-zone {
+                padding: 16px;
+            }
+
+            .danger-zone button {
+                min-height: 48px;
+                font-size: 16px;
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            h2 {
+                font-size: 18px;
+            }
+
+            .export-btn {
+                min-height: 44px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/static/i18n.js"></script>
+    <script src="/static/shared.js"></script>
+    <script>renderNav('consent');</script>
+
+    <div class="container">
+        <header class="page-header">
+            <h1>🔐 Privacy & Consent</h1>
+            <p>You are in complete control of your data</p>
+        </header>
+
+        <!-- R10.2: Granular Consent Toggles -->
+        <div class="section">
+            <h2>📋 Data Usage Consent</h2>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    <strong>Recording & Transcription</strong>
+                    <div class="desc">Allow InstaBio to record and transcribe your voice</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="consent-recording" checked
+                        onchange="updateConsent('recording', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    <strong>Biography Generation</strong>
+                    <div class="desc">Allow AI to write your biography from transcripts</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="consent-biography" checked
+                        onchange="updateConsent('biography', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    <strong>Voice Cloning</strong>
+                    <div class="desc">Allow creation of an AI voice clone (biometric data)</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="consent-voice" onchange="updateConsent('voice_clone', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    <strong>Avatar Generation</strong>
+                    <div class="desc">Allow creation of a visual AI avatar (biometric data)</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="consent-avatar" onchange="updateConsent('avatar', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    <strong>Soul AI Chatbot</strong>
+                    <div class="desc">Allow family members to chat with your AI persona</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="consent-soul" onchange="updateConsent('soul', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-label">
+                    <strong>Family Sharing</strong>
+                    <div class="desc">Allow designated family members to view your content</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="consent-family" onchange="updateConsent('family_sharing', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="success-msg" id="consent-saved">✅ Preferences saved</div>
+        </div>
+
+        <!-- R10.3: Biometric Notice -->
+        <div class="section" style="background:#FFF7ED; border:1px solid #FDBA74;">
+            <h2>🧬 Biometric Data Notice</h2>
+            <p style="font-size:16px; color:#9A3412;">
+                Voice cloning and avatar generation involve processing <strong>biometric data</strong>
+                (your voice patterns and facial features). This data is:
+            </p>
+            <ul style="margin:12px 0; padding-left:20px; font-size:16px; color:#9A3412;">
+                <li>Stored locally on our servers — never shared with third parties</li>
+                <li>Encrypted at rest</li>
+                <li>Deletable at any time via the controls below</li>
+                <li>Subject to BIPA and GDPR protections where applicable</li>
+            </ul>
+        </div>
+
+        <!-- R10.5: Data Export -->
+        <div class="section">
+            <h2>📦 Export Your Data</h2>
+            <p>Download a complete copy of all your data including recordings, transcripts, biography, and journal
+                entries.</p>
+            <button class="export-btn" onclick="exportData()">📥 Download My Data</button>
+            <div class="success-msg" id="export-msg">✅ Export started — you'll receive a download link</div>
+        </div>
+
+        <!-- R10.4: Right to be Forgotten -->
+        <div class="section danger-zone">
+            <h2>⚠️ Delete My Data</h2>
+            <p>Permanently delete all your data from InstaBio. This <strong>cannot be undone</strong>.</p>
+            <p style="margin-top:8px; font-size:16px; color:#7F1D1D;">This will delete: recordings, transcripts,
+                biography, journal, voice clone, avatar, and all account data.</p>
+            <button class="danger-btn" onclick="requestDeletion()">🗑️ Delete Everything</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        const token = localStorage.getItem('instabio_token');
+        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+        // Load current consent settings
+        async function loadConsent() {
+            try {
+                const resp = await fetch(`${API_URL}/consents`, { headers });
+                const data = await resp.json();
+                if (data.consents) {
+                    for (const [key, val] of Object.entries(data.consents)) {
+                        const el = document.getElementById(`consent-${key}`);
+                        if (el) el.checked = val;
+                    }
+                }
+            } catch (e) { /* use defaults */ }
+        }
+
+        async function updateConsent(feature, enabled) {
+            try {
+                await fetch(`${API_URL}/consent`, {
+                    method: 'POST', headers,
+                    body: JSON.stringify({ tier: 0, accepted: enabled, feature })
+                });
+                const msg = document.getElementById('consent-saved');
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 2000);
+            } catch (e) {
+                alert('Failed to save preference. Please try again.');
+            }
+        }
+
+        async function exportData() {
+            try {
+                const resp = await fetch(`${API_URL}/user/export`, {
+                    method: 'POST', headers
+                });
+                const data = await resp.json();
+                const msg = document.getElementById('export-msg');
+                msg.style.display = 'block';
+                if (data.download_url) {
+                    window.location.href = data.download_url;
+                }
+            } catch (e) {
+                alert('Export failed. Please try again.');
+            }
+        }
+
+        async function requestDeletion() {
+            const confirm1 = confirm('Are you sure you want to delete ALL your data? This cannot be undone.');
+            if (!confirm1) return;
+            const confirm2 = confirm('This is permanent. Type "DELETE" to confirm.');
+            if (!confirm2) return;
+            const typed = prompt('Type DELETE to confirm:');
+            if (typed !== 'DELETE') { alert('Deletion cancelled.'); return; }
+            try {
+                await fetch(`${API_URL}/user/delete`, { method: 'DELETE', headers });
+                localStorage.clear();
+                alert('Your data has been permanently deleted. Thank you for using InstaBio.');
+                window.location.href = '/';
+            } catch (e) {
+                alert('Deletion failed. Please contact support.');
+            }
+        }
+
+        loadConsent();
+    </script>
+</body>
+
+</html>

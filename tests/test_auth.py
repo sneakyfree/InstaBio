@@ -4,7 +4,7 @@ Tests token expiration, auth guards, and registration edge cases.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 @pytest.mark.asyncio
@@ -26,7 +26,7 @@ async def test_token_expires_after_configured_days(client):
     from app import database as db_mod
     import aiosqlite
     async with aiosqlite.connect(db_mod.DB_PATH) as db:
-        two_days_ago = (datetime.utcnow() - timedelta(days=2)).isoformat()
+        two_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
         await db.execute(
             "UPDATE users SET token_created_at = ? WHERE id = ?",
             (two_days_ago, data["user_id"])

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2D5016">
+    <title>Pricing — InstaBio</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        :root {
+            --color-primary: #2D5016;
+            --color-primary-light: #3D6B1E;
+            --color-background: #FFF8F0;
+            --color-white: #FFFFFF;
+            --color-text: #1B3409;
+            --color-text-light: #3A3A3A;
+            --color-gold: #92400E;
+            --color-green: #059669;
+            --spacing: 24px;
+            --radius: 16px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-background);
+            min-height: 100vh;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 60px 24px 40px;
+            background: linear-gradient(135deg, #F0FFF0 0%, var(--color-background) 100%);
+        }
+
+        .hero h1 {
+            font-size: 38px;
+            color: var(--color-primary);
+            margin-bottom: 12px;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--color-text-light);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .gift-toggle {
+            margin: 24px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 18px;
+            color: var(--color-primary);
+        }
+
+        .gift-toggle input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            accent-color: var(--color-primary);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .price-card {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 28px;
+            border: 2px solid #E0D5C5;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .price-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .price-card.featured {
+            border: 3px solid var(--color-gold);
+            box-shadow: 0 8px 32px rgba(146, 64, 14, 0.15);
+        }
+
+        .price-card.featured::before {
+            content: '⭐ Most Popular';
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-gold);
+            color: white;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .card-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .card-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: 4px;
+        }
+
+        .card-price {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--color-text);
+            margin-bottom: 4px;
+        }
+
+        .card-price .period {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--color-text-light);
+        }
+
+        .card-desc {
+            font-size: 16px;
+            color: var(--color-text-light);
+            margin-bottom: 16px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 24px;
+        }
+
+        .feature-list li {
+            padding: 6px 0;
+            font-size: 16px;
+            color: var(--color-text);
+        }
+
+        .feature-list li::before {
+            content: '✅ ';
+        }
+
+        .buy-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--color-white);
+            background: var(--color-primary);
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .buy-btn:hover {
+            background: var(--color-primary-light);
+        }
+
+        .buy-btn.gold {
+            background: var(--color-gold);
+        }
+
+        .buy-btn.green {
+            background: var(--color-green);
+        }
+
+        .buy-btn:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .free-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #D1FAE5;
+            color: var(--color-green);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .faq {
+            max-width: 800px;
+            margin: 60px auto;
+            padding: 0 24px;
+        }
+
+        .faq h2 {
+            font-size: 28px;
+            color: var(--color-primary);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .faq-item {
+            margin-bottom: 20px;
+        }
+
+        .faq-item summary {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-primary);
+            cursor: pointer;
+            padding: 12px;
+            background: var(--color-white);
+            border-radius: 8px;
+            border: 1px solid #E0D5C5;
+        }
+
+        .faq-item p {
+            padding: 12px 16px;
+            color: var(--color-text-light);
+        }
+
+        @media (max-width: 768px) {
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/static/i18n.js"></script>
+    <script src="/static/shared.js"></script>
+    <script>renderNav('pricing');</script>
+
+    <div class="hero">
+        <h1>🌿 Preserve What Matters</h1>
+        <p>Choose the perfect way to capture and share your family's story</p>
+        <div class="gift-toggle">
+            <input type="checkbox" id="gift-mode" onchange="toggleGiftMode()">
+            <label for="gift-mode">🎁 Buying as a gift?</label>
+        </div>
+    </div>
+
+    <div class="pricing-grid">
+        <!-- Free Tier -->
+        <div class="price-card">
+            <div class="card-icon">🎙️</div>
+            <div class="card-name">Free Starter</div>
+            <div class="card-price">Free <span class="free-badge">Current Plan</span></div>
+            <div class="card-desc">Get started with recording</div>
+            <ul class="feature-list">
+                <li>60 minutes of recording</li>
+                <li>Basic transcription</li>
+                <li>Simple biography preview</li>
+            </ul>
+            <button class="buy-btn green" disabled>Your Current Plan</button>
+        </div>
+
+        <!-- Biography Package -->
+        <div class="price-card">
+            <div class="card-icon">📖</div>
+            <div class="card-name">Biography</div>
+            <div class="card-price">$149</div>
+            <div class="card-desc">A professional written biography</div>
+            <ul class="feature-list">
+                <li>Unlimited recording</li>
+                <li>Full AI biography</li>
+                <li>PDF & EPUB export</li>
+                <li>Timeline & journal</li>
+                <li>Print-ready format</li>
+            </ul>
+            <button class="buy-btn" onclick="purchase('biography')">Get My Biography</button>
+        </div>
+
+        <!-- Journal Package -->
+        <div class="price-card">
+            <div class="card-icon">📝</div>
+            <div class="card-name">Journal</div>
+            <div class="card-price">$79</div>
+            <div class="card-desc">Turn memories into a diary</div>
+            <ul class="feature-list">
+                <li>Unlimited recording</li>
+                <li>Calendar journal view</li>
+                <li>Daily entries from recordings</li>
+                <li>PDF export</li>
+            </ul>
+            <button class="buy-btn" onclick="purchase('journal')">Start My Journal</button>
+        </div>
+
+        <!-- Voice Clone Package -->
+        <div class="price-card">
+            <div class="card-icon">🗣️</div>
+            <div class="card-name">Voice</div>
+            <div class="card-price">$99</div>
+            <div class="card-desc">Clone your voice forever</div>
+            <ul class="feature-list">
+                <li>AI voice clone</li>
+                <li>Read-aloud biography</li>
+                <li>Custom voice messages</li>
+                <li>Holiday greetings</li>
+            </ul>
+            <button class="buy-btn" onclick="purchase('voice_clone')">Clone My Voice</button>
+        </div>
+
+        <!-- Avatar Package -->
+        <div class="price-card">
+            <div class="card-icon">👤</div>
+            <div class="card-name">Avatar</div>
+            <div class="card-price">$199</div>
+            <div class="card-desc">A talking video avatar</div>
+            <ul class="feature-list">
+                <li>AI-generated avatar</li>
+                <li>Story narration videos</li>
+                <li>Download & share</li>
+                <li>TV/Cast mode</li>
+            </ul>
+            <button class="buy-btn" onclick="purchase('avatar')">Create My Avatar</button>
+        </div>
+
+        <!-- Legacy Box — Featured -->
+        <div class="price-card featured">
+            <div class="card-icon">🏆</div>
+            <div class="card-name">Legacy Box</div>
+            <div class="card-price">$399</div>
+            <div class="card-desc">The complete family heirloom</div>
+            <ul class="feature-list">
+                <li>Everything in all packages</li>
+                <li>Printed hardcover book</li>
+                <li>USB drive with recordings</li>
+                <li>Soul AI chatbot</li>
+                <li>Family sharing portal</li>
+                <li>Priority support</li>
+            </ul>
+            <button class="buy-btn gold" onclick="purchase('legacy_box')">🏆 Get the Legacy Box</button>
+        </div>
+
+        <!-- Living Legacy Subscription -->
+        <div class="price-card">
+            <div class="card-icon">💚</div>
+            <div class="card-name">Living Legacy</div>
+            <div class="card-price">$9.99<span class="period">/month</span></div>
+            <div class="card-desc">Ongoing story capture</div>
+            <ul class="feature-list">
+                <li>Unlimited recording</li>
+                <li>Continuous biography updates</li>
+                <li>Monthly printed chapter</li>
+                <li>Family access portal</li>
+                <li>Cloud storage included</li>
+            </ul>
+            <button class="buy-btn green" onclick="purchase('living_legacy')">Subscribe Monthly</button>
+        </div>
+    </div>
+
+    <div class="faq">
+        <h2>Frequently Asked Questions</h2>
+        <details class="faq-item">
+            <summary>How does InstaBio work?</summary>
+            <p>Simply talk about your life — your memories, stories, and experiences. Our AI listens, transcribes, and
+                weaves your words into a professionally written biography, journal entries, and timeline.</p>
+        </details>
+        <details class="faq-item">
+            <summary>Is my data safe and private?</summary>
+            <p>Absolutely. Your recordings and personal data are encrypted and stored securely. We never share your
+                information. You maintain full control and can delete everything at any time.</p>
+        </details>
+        <details class="faq-item">
+            <summary>What is the Soul AI?</summary>
+            <p>The Soul is an AI chatbot trained on your recordings. Family members can have natural conversations with
+                it, hearing stories and wisdom in your own words and personality.</p>
+        </details>
+        <details class="faq-item">
+            <summary>Can I buy this as a gift?</summary>
+            <p>Yes! Toggle the gift mode above any pricing card. You'll receive a beautiful gift code that your loved
+                one can redeem to start their story.</p>
+        </details>
+        <details class="faq-item">
+            <summary>What if I'm not tech-savvy?</summary>
+            <p>InstaBio is designed to be as simple as making a phone call. Just tap the big green record button and
+                start talking. That's it!</p>
+        </details>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        const token = localStorage.getItem('instabio_token');
+        let isGiftMode = false;
+
+        function toggleGiftMode() {
+            isGiftMode = document.getElementById('gift-mode').checked;
+            document.querySelectorAll('.buy-btn:not(:disabled)').forEach(btn => {
+                const baseText = btn.dataset.originalText || btn.textContent;
+                if (!btn.dataset.originalText) btn.dataset.originalText = baseText;
+                btn.textContent = isGiftMode ? `🎁 Gift: ${baseText}` : baseText;
+            });
+        }
+
+        async function purchase(productId) {
+            if (!token) {
+                window.location.href = '/onboard';
+                return;
+            }
+            try {
+                const body = { product_id: productId };
+                if (isGiftMode) body.is_gift = true;
+
+                const response = await fetch(`${API_URL}/payments/create-session`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                if (data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else {
+                    alert(data.detail || 'Payment setup failed. Please try again.');
+                }
+            } catch (err) {
+                alert('Connection error. Please check your internet and try again.');
+            }
+        }
+    </script>
+</body>
+
+</html>

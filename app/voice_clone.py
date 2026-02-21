@@ -1,6 +1,7 @@
 """
-InstaBio Voice Clone Status Module
+InstaBio Voice Clone Module
 Tracks progress toward voice clone quality based on recording hours.
+Integrates with ElevenLabs API for voice cloning and synthesis.
 
 Voice Clone Tiers:
 - 0-1 hours: Not enough data yet (0%)
@@ -12,8 +13,18 @@ Voice Clone Tiers:
 - 50+ hours: Tier 4 — Ultra, indistinguishable (99%)
 """
 
+import os
+import logging
 from dataclasses import dataclass
 from typing import Optional
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+# ElevenLabs configuration
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1"
 
 # Tier thresholds in hours
 TIER_THRESHOLDS = [
@@ -154,41 +165,187 @@ def get_voice_clone_status_dict(total_hours: float) -> dict:
     }
 
 
-# ----- Placeholder for actual voice clone generation -----
+# ----- ElevenLabs Voice Clone Integration -----
+
+def _elevenlabs_available() -> bool:
+    """Return True if ElevenLabs API key is configured."""
+    return bool(ELEVENLABS_API_KEY)
+
 
 async def generate_voice_clone(user_id: int, audio_files: list[str]) -> dict:
     """
-    Placeholder for actual voice clone generation.
-    
-    In production, this would:
-    1. Upload audio to ElevenLabs API or similar
-    2. Train a custom voice model
-    3. Return the voice clone ID
-    
-    For now, returns a mock response.
+    Generate a voice clone using ElevenLabs API.
+
+    Sends the user's best audio samples to ElevenLabs' "Add Voice" endpoint
+    to create a custom Instant Voice Clone.
+
+    Args:
+        user_id: The user's numeric ID (used to name the clone).
+        audio_files: List of file paths to WAV/MP3/WEBM audio samples.
+
+    Returns:
+        dict with ``voice_id``, ``status``, and ``message``.
     """
-    total_duration = sum(len(f) for f in audio_files)  # Mock calculation
-    
-    return {
-        "status": "pending",
-        "message": "Voice clone generation coming soon! We're working on integrating with ElevenLabs.",
-        "estimated_quality": "Will depend on your recording hours",
-        "api_ready": False,
-    }
+    if not _elevenlabs_available():
+        logger.warning("ElevenLabs API key not configured — voice clone unavailable")
+        return {
+            "status": "unavailable",
+            "message": (
+                "Voice cloning is not configured yet.  Set the ELEVENLABS_API_KEY "
+                "environment variable to enable it."
+            ),
+            "voice_id": None,
+            "api_ready": False,
+        }
+
+    if not audio_files:
+        return {
+            "status": "error",
+            "message": "No audio files provided for voice cloning.",
+            "voice_id": None,
+            "api_ready": True,
+        }
+
+    # Build multipart payload — up to 25 samples, each ≤10 MB
+    files = []
+    for path in audio_files[:25]:
+        try:
+            with open(path, "rb") as f:
+                files.append(("files", (os.path.basename(path), f.read(), "audio/mpeg")))
+        except OSError as exc:
+            logger.warning("Skipping unreadable audio file %s: %s", path, exc)
+
+    if not files:
+        return {
+            "status": "error",
+            "message": "None of the provided audio files could be read.",
+            "voice_id": None,
+            "api_ready": True,
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                f"{ELEVENLABS_BASE_URL}/voices/add",
+                headers={"xi-api-key": ELEVENLABS_API_KEY},
+                data={
+                    "name": f"InstaBio-User-{user_id}",
+                    "description": f"Voice clone for InstaBio user {user_id}",
+                },
+                files=files,
+            )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            voice_id = data.get("voice_id")
+            logger.info("Voice clone created for user %d: %s", user_id, voice_id)
+            return {
+                "status": "ready",
+                "message": "Your voice clone has been created!",
+                "voice_id": voice_id,
+                "api_ready": True,
+            }
+        else:
+            error_detail = resp.text[:300]
+            logger.error("ElevenLabs clone failed (%d): %s", resp.status_code, error_detail)
+            return {
+                "status": "error",
+                "message": f"Voice cloning service returned an error (HTTP {resp.status_code}).",
+                "voice_id": None,
+                "api_ready": True,
+            }
+
+    except httpx.TimeoutException:
+        logger.error("ElevenLabs voice clone request timed out for user %d", user_id)
+        return {
+            "status": "error",
+            "message": "The voice cloning service took too long to respond. Please try again later.",
+            "voice_id": None,
+            "api_ready": True,
+        }
+    except Exception as exc:
+        logger.error("ElevenLabs voice clone error for user %d: %s", user_id, exc)
+        return {
+            "status": "error",
+            "message": "An unexpected error occurred while creating your voice clone.",
+            "voice_id": None,
+            "api_ready": True,
+        }
 
 
 async def synthesize_speech(voice_clone_id: str, text: str) -> dict:
     """
-    Placeholder for voice synthesis.
-    
-    In production, this would:
-    1. Send text to the voice clone API
-    2. Return audio data
-    
-    For now, returns a mock response.
+    Synthesize speech using a cloned voice via ElevenLabs TTS.
+
+    Args:
+        voice_clone_id: The ElevenLabs voice ID returned by ``generate_voice_clone``.
+        text: Text to synthesize.
+
+    Returns:
+        dict with ``audio_bytes``, ``status``, and optionally ``audio_url``.
     """
-    return {
-        "status": "not_implemented",
-        "message": "Speech synthesis coming soon!",
-        "audio_url": None,
-    }
+    if not _elevenlabs_available():
+        return {
+            "status": "unavailable",
+            "message": "Voice synthesis is not configured yet. Set ELEVENLABS_API_KEY.",
+            "audio_bytes": None,
+            "audio_url": None,
+        }
+
+    if not voice_clone_id:
+        return {
+            "status": "error",
+            "message": "No voice clone ID provided. Generate a voice clone first.",
+            "audio_bytes": None,
+            "audio_url": None,
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{ELEVENLABS_BASE_URL}/text-to-speech/{voice_clone_id}",
+                headers={
+                    "xi-api-key": ELEVENLABS_API_KEY,
+                    "Content-Type": "application/json",
+                    "Accept": "audio/mpeg",
+                },
+                json={
+                    "text": text,
+                    "model_id": "eleven_monolingual_v1",
+                    "voice_settings": {
+                        "stability": 0.5,
+                        "similarity_boost": 0.8,
+                    },
+                },
+            )
+
+        if resp.status_code == 200:
+            logger.info("Synthesized %d bytes of speech for voice %s", len(resp.content), voice_clone_id)
+            return {
+                "status": "ready",
+                "message": "Speech synthesized successfully.",
+                "audio_bytes": resp.content,
+                "content_type": "audio/mpeg",
+            }
+        else:
+            error_detail = resp.text[:300]
+            logger.error("ElevenLabs TTS failed (%d): %s", resp.status_code, error_detail)
+            return {
+                "status": "error",
+                "message": f"Speech synthesis returned an error (HTTP {resp.status_code}).",
+                "audio_bytes": None,
+            }
+
+    except httpx.TimeoutException:
+        return {
+            "status": "error",
+            "message": "Speech synthesis timed out. Please try again.",
+            "audio_bytes": None,
+        }
+    except Exception as exc:
+        logger.error("ElevenLabs TTS error: %s", exc)
+        return {
+            "status": "error",
+            "message": "An unexpected error occurred during speech synthesis.",
+            "audio_bytes": None,
+        }

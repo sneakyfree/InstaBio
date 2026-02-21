@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 import aiosqlite
 import bcrypt
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, BackgroundTasks, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,6 +30,7 @@ from slowapi.errors import RateLimitExceeded
 
 from . import database as db
 from .transcription import transcribe_audio, transcribe_pending_chunks, is_whisper_available
+from .streaming_transcription import handle_streaming_transcription, get_transcription_status
 from .entity_extraction import get_extractor, ExtractionResult, build_timeline
 from .biography import get_biography_generator, BiographyStyle
 from .journal import get_journal_generator
@@ -129,6 +130,31 @@ if os.environ.get("FORCE_HTTPS", "").strip() == "1":
     from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
     app.add_middleware(HTTPSRedirectMiddleware)
 
+# R9: Security Headers Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "media-src 'self' blob:; "
+            "connect-src 'self' ws: wss:; "
+            "font-src 'self'; "
+            "frame-ancestors 'none'"
+        )
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 # Serve static files (HTML, CSS, JS)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -139,6 +165,7 @@ class RegisterRequest(BaseModel):
     birth_year: int
     email: EmailStr
     pin: Optional[str] = None  # B2: optional 4-digit PIN
+    is_signin: bool = False  # True when using Sign In form vs New Account
 
 class RegisterResponse(BaseModel):
     success: bool
@@ -230,6 +257,21 @@ async def progress_page():
     """Serve the progress dashboard page."""
     return FileResponse(STATIC_DIR / "progress.html")
 
+@app.get("/pricing")
+async def pricing_page():
+    """R8.1: Serve the pricing/storefront page."""
+    return FileResponse(STATIC_DIR / "pricing.html")
+
+@app.get("/tv")
+async def tv_page():
+    """R6.4: Serve TV/Living Room mode."""
+    return FileResponse(STATIC_DIR / "tv.html")
+
+@app.get("/consent")
+async def consent_page():
+    """R10: Serve the privacy & consent portal."""
+    return FileResponse(STATIC_DIR / "consent.html")
+
 @app.get("/api/health")
 async def health():
     """Health check endpoint."""
@@ -255,9 +297,14 @@ async def register(data: RegisterRequest, request: Request):
     if data.pin and len(data.pin) == 4 and data.pin.isdigit():
         pin_hash = bcrypt.hashpw(data.pin.encode(), bcrypt.gensalt()).decode()
     
-    # Check if email already exists
     existing = await db.get_user_by_email(data.email)
     if existing:
+        # If this is a NEW ACCOUNT attempt (not sign-in), tell them to sign in
+        if not data.is_signin:
+            raise HTTPException(
+                status_code=409,
+                detail="An account already exists for that email! Please tap 'Sign In' to access your account."
+            )
         # B2: Verify PIN if the account has one
         stored_pin = existing.get('pin_hash', '') or ''
         if stored_pin and data.pin:
@@ -295,7 +342,22 @@ async def register(data: RegisterRequest, request: Request):
                 status_code=401,
                 detail="Please enter your 4-digit PIN to sign in."
             )
-        # If no stored PIN, allow through (legacy user)
+        elif not stored_pin and data.pin:
+            # Legacy account without PIN — set the PIN now
+            new_hash = bcrypt.hashpw(data.pin.encode(), bcrypt.gensalt()).decode()
+            async with aiosqlite.connect(db.DB_PATH) as conn:
+                await conn.execute(
+                    "UPDATE users SET pin_hash = ? WHERE id = ?",
+                    (new_hash, existing['id'])
+                )
+                await conn.commit()
+            logger.info(f"PIN set for legacy user {existing['id']}")
+        elif not stored_pin and not data.pin:
+            # Legacy account, no PIN provided — require them to set one
+            raise HTTPException(
+                status_code=401,
+                detail="This account needs a PIN. Please enter a 4-digit PIN to secure your account."
+            )
         
         # Rotate token on re-login
         new_token = secrets.token_urlsafe(32)
@@ -371,6 +433,23 @@ async def start_session(authorization: str = Header(None)):
         "session_id": session_id,
         "message": "Recording session started. We're listening."
     }
+
+# ----- R2: Streaming Transcription -----
+@app.websocket("/ws/transcribe")
+async def ws_transcribe(websocket: WebSocket):
+    """WebSocket endpoint for real-time streaming transcription."""
+    await websocket.accept()
+    try:
+        await handle_streaming_transcription(websocket)
+    except WebSocketDisconnect:
+        logger.info("Streaming transcription client disconnected")
+    except Exception as e:
+        logger.error(f"Streaming transcription error: {e}")
+
+@app.get("/api/transcription/status")
+async def api_transcription_status():
+    """R2.2: Hardware detection — is transcription engine available?"""
+    return get_transcription_status()
 
 @app.post("/api/upload")
 @limiter.limit("30/minute")  # SEC-9: rate limit uploads
@@ -1034,6 +1113,160 @@ async def get_biography_chapter(
     
     raise HTTPException(status_code=404, detail=f"Chapter {chapter_number} not found")
 
+# ----- R3: Biography Exports & Enhancements -----
+@app.get("/api/biography/export/pdf")
+async def export_biography_pdf(
+    format: str = "standard",
+    authorization: str = Header(None)
+):
+    """R3.2/R3.8: Export biography as PDF (standard or print-ready 6x9)."""
+    from .pdf_export import generate_biography_pdf
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _biography_cache:
+        cached = await db.get_cache_result(user_id, "biography")
+        if cached:
+            _biography_cache[user_id] = cached
+        else:
+            raise HTTPException(status_code=404, detail="No biography to export. Generate one first.")
+    
+    bio = _biography_cache[user_id]
+    chapters = bio.get("chapters", [])
+    user_name = user.get('first_name', 'Unknown')
+    birth_year = user.get('birth_year')
+    
+    pdf_bytes = generate_biography_pdf(
+        chapters=chapters,
+        user_name=user_name,
+        birth_year=birth_year,
+        format_type=format
+    )
+    
+    from fastapi.responses import Response
+    content_type = 'application/pdf' if pdf_bytes[:4] == b'%PDF' else 'text/html'
+    filename = f"{user_name.replace(' ', '_')}_biography.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type=content_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+@app.get("/api/biography/export/epub")
+async def export_biography_epub(authorization: str = Header(None)):
+    """R3.3: Export biography as EPUB e-book."""
+    from .epub_export import generate_biography_epub
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _biography_cache:
+        cached = await db.get_cache_result(user_id, "biography")
+        if cached:
+            _biography_cache[user_id] = cached
+        else:
+            raise HTTPException(status_code=404, detail="No biography to export.")
+    
+    bio = _biography_cache[user_id]
+    chapters = bio.get("chapters", [])
+    user_name = user.get('first_name', 'Unknown')
+    birth_year = user.get('birth_year')
+    
+    epub_bytes = generate_biography_epub(chapters, user_name, birth_year)
+    
+    from fastapi.responses import Response
+    filename = f"{user_name.replace(' ', '_')}_biography.epub"
+    return Response(
+        content=epub_bytes,
+        media_type='application/epub+zip',
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+@app.get("/api/recordings/{session_uuid}/chunk/{chunk_index}")
+async def serve_chunk_audio(
+    session_uuid: str,
+    chunk_index: int,
+    authorization: str = Header(None)
+):
+    """R3.1: Serve a specific audio chunk for citation playback."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    chunk_dir = DATA_DIR / "recordings" / str(user_id) / session_uuid
+    chunk_file = chunk_dir / f"chunk_{chunk_index}.webm"
+    
+    if not chunk_file.exists():
+        raise HTTPException(status_code=404, detail="Audio chunk not found")
+    
+    return FileResponse(chunk_file, media_type="audio/webm")
+
+@app.get("/api/biography/follow-up-questions")
+async def get_follow_up_questions(authorization: str = Header(None)):
+    """R3.4: Generate questions to enrich the biography based on timeline gaps."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    # Get biography and check for gaps
+    if user_id not in _biography_cache:
+        cached = await db.get_cache_result(user_id, "biography")
+        if cached:
+            _biography_cache[user_id] = cached
+    
+    bio = _biography_cache.get(user_id, {})
+    chapters = bio.get("chapters", [])
+    
+    # Generate questions based on gaps
+    questions = []
+    if not chapters:
+        questions = [
+            {"question": "Where and when were you born?", "category": "early_life"},
+            {"question": "What is your earliest childhood memory?", "category": "childhood"},
+            {"question": "Who were the most important people in your early life?", "category": "family"},
+        ]
+    else:
+        # Analyze what's covered and suggest gaps
+        default_questions = [
+            {"question": "What was the happiest day of your life?", "category": "milestone"},
+            {"question": "What career or job did you enjoy the most?", "category": "career"},
+            {"question": "What advice would you give to your younger self?", "category": "wisdom"},
+            {"question": "What family traditions mean the most to you?", "category": "family"},
+            {"question": "What was the biggest challenge you overcame?", "category": "adversity"},
+        ]
+        # Return questions not already covered
+        questions = default_questions[:3]
+    
+    return {
+        "success": True,
+        "questions": questions,
+        "total": len(questions)
+    }
+
+@app.get("/api/journal/export/pdf")
+async def export_journal_pdf(authorization: str = Header(None)):
+    """R4.5: Export journal as PDF."""
+    from .pdf_export import generate_journal_pdf
+    user = await get_current_user(authorization)
+    user_id = user['id']
+    
+    if user_id not in _journal_cache:
+        cached = await db.get_cache_result(user_id, "journal")
+        if cached:
+            _journal_cache[user_id] = cached
+        else:
+            raise HTTPException(status_code=404, detail="No journal to export.")
+    
+    entries = _journal_cache[user_id].get("entries", [])
+    user_name = user.get('first_name', 'Unknown')
+    
+    pdf_bytes = generate_journal_pdf(entries, user_name)
+    
+    from fastapi.responses import Response
+    filename = f"{user_name.replace(' ', '_')}_journal.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type='application/pdf' if pdf_bytes[:4] == b'%PDF' else 'text/html',
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
 @app.get("/api/journal")
 async def get_journal(
     start_date: Optional[str] = None,
@@ -1111,7 +1344,10 @@ async def get_journal_entry(
 @app.get("/api/llm/status")
 async def get_llm_status():
     """Check LLM (Ollama on Veron) availability."""
-    info = await test_connection()
+    try:
+        info = await asyncio.wait_for(test_connection(), timeout=3.0)
+    except asyncio.TimeoutError:
+        info = {"available": False, "transport": "none", "model": "none", "ollama_url": ""}
     
     return {
         "success": True,
@@ -1317,4 +1553,414 @@ async def not_found_handler(request, exc):
             status_code=404,
             content={"detail": "Not found"}
         )
+    # Serve known pages
+    page_map = {
+        "/soul": "soul.html",
+        "/gift": "gift.html",
+        "/family": "family.html",
+        "/pricing": "pricing.html",
+        "/tv": "tv.html",
+        "/consent": "consent.html",
+    }
+    for route, page in page_map.items():
+        if request.url.path == route:
+            page_file = STATIC_DIR / page
+            if page_file.exists():
+                return FileResponse(page_file)
     return FileResponse(STATIC_DIR / "index.html")
+
+
+# ----- Consent Endpoints -----
+
+class ConsentRequest(BaseModel):
+    tier: int
+    accepted: bool
+
+@app.post("/api/consent")
+async def save_consent_endpoint(data: ConsentRequest, authorization: str = Header(None)):
+    """Record consent acceptance or rejection for a specific tier."""
+    user = await get_current_user(authorization)
+    await db.save_consent(user['id'], data.tier, data.accepted)
+    await db.log_audit(user['id'], "consent_update", f"tier_{data.tier}",
+                       f"{'accepted' if data.accepted else 'rejected'}")
+    return {
+        "success": True,
+        "tier": data.tier,
+        "accepted": data.accepted,
+        "message": f"Consent for tier {data.tier} {'accepted' if data.accepted else 'rejected'}."
+    }
+
+@app.get("/api/consents")
+async def get_consents_endpoint(authorization: str = Header(None)):
+    """Get user's consent status for all tiers."""
+    user = await get_current_user(authorization)
+    consents = await db.get_user_consents(user['id'])
+    return {"success": True, "consents": consents}
+
+
+# ----- Audit Log Endpoints -----
+
+@app.get("/api/audit-log")
+async def get_audit_log_endpoint(authorization: str = Header(None)):
+    """Get audit log entries for the current user."""
+    user = await get_current_user(authorization)
+    entries = await db.get_audit_log(user['id'])
+    return {"success": True, "entries": entries}
+
+
+# ----- Account Deletion -----
+
+@app.delete("/api/account")
+async def delete_account_endpoint(authorization: str = Header(None)):
+    """Delete user account and ALL associated data. This is irreversible."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+
+    # Log the deletion attempt (will be deleted along with account)
+    await db.log_audit(user_id, "account_deletion", "account", "User requested account deletion")
+
+    # Delete audio files from disk
+    import shutil
+    user_audio_dirs = list(AUDIO_DIR.glob("*"))
+    sessions = await db.get_user_sessions(user_id)
+    for session in sessions:
+        session_dir = AUDIO_DIR / session['session_uuid']
+        if session_dir.exists():
+            shutil.rmtree(session_dir, ignore_errors=True)
+
+    # Delete photos from disk
+    photos_dir = PHOTOS_DIR / str(user_id)
+    if photos_dir.exists():
+        shutil.rmtree(photos_dir, ignore_errors=True)
+
+    # Delete from database
+    deleted = await db.delete_user_account(user_id)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Account deletion failed")
+
+    return {"success": True, "message": "Your account and all data have been permanently deleted."}
+
+
+# ----- Biography Share Endpoints -----
+
+class ShareRequest(BaseModel):
+    chapter_number: int
+    recipient_name: Optional[str] = None
+
+@app.post("/api/biography/share")
+async def create_share_endpoint(data: ShareRequest, authorization: str = Header(None)):
+    """Create a shareable link for a biography chapter."""
+    user = await get_current_user(authorization)
+    share_token = secrets.token_urlsafe(16)
+    result = await db.create_share_link(
+        user['id'], data.chapter_number, share_token, data.recipient_name
+    )
+    await db.log_audit(user['id'], "share_created", f"chapter_{data.chapter_number}")
+    return {
+        "success": True,
+        "share_url": f"/share/{share_token}",
+        "share_token": share_token,
+        **result
+    }
+
+@app.get("/api/share/{token}")
+async def view_share_endpoint(token: str):
+    """View a shared biography chapter (public, no auth required)."""
+    share = await db.get_share_link(token)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share link not found or expired")
+
+    # Get the biography chapter
+    user_id = share['user_id']
+    chapter_num = share['chapter_number']
+
+    cached = await db.get_cache_result(user_id, "biography")
+    if not cached:
+        return {"success": False, "message": "Biography not yet generated."}
+
+    chapters = cached.get("chapters", [])
+    chapter = None
+    for c in chapters:
+        if c.get("number") == chapter_num:
+            chapter = c
+            break
+
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
+
+    return {
+        "success": True,
+        "author_name": share.get('first_name', 'Someone'),
+        "chapter": chapter,
+        "shared_by": share.get('recipient_name'),
+    }
+
+
+# ----- Download Recordings -----
+
+@app.get("/api/recordings/download/{session_uuid}")
+async def download_recording(session_uuid: str, authorization: str = Header(None)):
+    """Download all audio chunks for a session as individual files list."""
+    user = await get_current_user(authorization)
+
+    session = await db.get_session_by_uuid(session_uuid)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session['user_id'] != user['id']:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    session_dir = AUDIO_DIR / session_uuid
+    if not session_dir.exists():
+        raise HTTPException(status_code=404, detail="Audio files not found")
+
+    files = sorted(session_dir.iterdir())
+    audio_files = [f.name for f in files if f.suffix in {'.webm', '.wav', '.mp3', '.ogg'}]
+
+    await db.log_audit(user['id'], "download_recording", session_uuid)
+    return {
+        "success": True,
+        "session_uuid": session_uuid,
+        "files": audio_files,
+        "download_urls": [f"/api/recordings/file/{session_uuid}/{f}" for f in audio_files]
+    }
+
+@app.get("/api/recordings/file/{session_uuid}/{filename}")
+async def serve_recording_file(session_uuid: str, filename: str, authorization: str = Header(None)):
+    """Serve an individual audio file for download."""
+    user = await get_current_user(authorization)
+
+    session = await db.get_session_by_uuid(session_uuid)
+    if not session or session['user_id'] != user['id']:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    file_path = AUDIO_DIR / session_uuid / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(file_path, filename=filename)
+
+
+# ----- Family Sharing Endpoints -----
+
+class FamilyInviteRequest(BaseModel):
+    email: str
+    name: Optional[str] = None
+    role: str = "viewer"
+
+class StewardRequest(BaseModel):
+    steward_email: str
+
+@app.post("/api/family/invite")
+async def invite_family_member(data: FamilyInviteRequest, authorization: str = Header(None)):
+    """Invite a family member to view your legacy."""
+    user = await get_current_user(authorization)
+    invite_token = secrets.token_urlsafe(16)
+    result = await db.add_family_member(
+        user['id'], data.email, data.name, data.role, invite_token
+    )
+    await db.log_audit(user['id'], "family_invite", data.email)
+    return {"success": True, "invite_token": invite_token, **result}
+
+@app.get("/api/family/members")
+async def get_family_members_endpoint(authorization: str = Header(None)):
+    """List all family members."""
+    user = await get_current_user(authorization)
+    members = await db.get_family_members(user['id'])
+    return {"success": True, "members": members}
+
+@app.delete("/api/family/member/{member_id}")
+async def remove_family_member_endpoint(member_id: int, authorization: str = Header(None)):
+    """Remove a family member."""
+    user = await get_current_user(authorization)
+    removed = await db.remove_family_member(user['id'], member_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Family member not found")
+    return {"success": True, "message": "Family member removed."}
+
+@app.post("/api/family/steward")
+async def set_steward_endpoint(data: StewardRequest, authorization: str = Header(None)):
+    """Designate a steward for your account."""
+    user = await get_current_user(authorization)
+    await db.set_steward(user['id'], data.steward_email)
+    await db.log_audit(user['id'], "steward_set", data.steward_email)
+    return {
+        "success": True,
+        "message": f"{data.steward_email} has been designated as your steward.",
+        "steward_email": data.steward_email
+    }
+
+
+# ----- Notification Endpoints -----
+
+@app.get("/api/notifications")
+async def get_notifications_endpoint(
+    unread_only: bool = False,
+    authorization: str = Header(None)
+):
+    """Get notifications for the current user."""
+    user = await get_current_user(authorization)
+    notifications = await db.get_notifications(user['id'], unread_only)
+    return {"success": True, "notifications": notifications}
+
+@app.post("/api/notifications/{notification_id}/read")
+async def mark_notification_read_endpoint(notification_id: int, authorization: str = Header(None)):
+    """Mark a notification as read."""
+    user = await get_current_user(authorization)
+    marked = await db.mark_notification_read(notification_id, user['id'])
+    if not marked:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"success": True}
+
+
+# ----- Biography PDF (Client-side print) -----
+
+@app.get("/api/biography/pdf")
+async def get_biography_pdf(authorization: str = Header(None)):
+    """Return biography data formatted for PDF generation (client-side print)."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+
+    cached = await db.get_cache_result(user_id, "biography")
+    if not cached:
+        return {"success": False, "message": "No biography generated yet."}
+
+    await db.log_audit(user_id, "biography_pdf_export", "biography")
+    return {
+        "success": True,
+        "biography": cached,
+        "print_ready": True,
+        "message": "Use Ctrl+P or the print button to save as PDF."
+    }
+
+
+# ----- Biography Review / Approval -----
+
+class ReviewRequest(BaseModel):
+    approved: bool
+    notes: Optional[str] = None
+
+@app.post("/api/biography/review")
+async def review_biography(data: ReviewRequest, authorization: str = Header(None)):
+    """Mark biography as approved or request changes."""
+    user = await get_current_user(authorization)
+    status = "approved" if data.approved else "needs_changes"
+    await db.save_cache_result(user['id'], "biography_review", {
+        "status": status,
+        "notes": data.notes,
+        "reviewed_at": datetime.now(UTC).isoformat()
+    })
+    await db.log_audit(user['id'], "biography_review", "biography", status)
+
+    if data.approved:
+        await db.create_notification(
+            user['id'], "biography", "Biography Approved! 📖",
+            "Your biography has been approved and is ready to share."
+        )
+
+    return {
+        "success": True,
+        "status": status,
+        "message": "Biography approved! You can now share or export it." if data.approved
+                   else "Changes requested. We'll regenerate your biography."
+    }
+
+
+# ----- Gift Endpoints -----
+
+class GiftRedeemRequest(BaseModel):
+    gift_code: str
+
+@app.post("/api/gift/redeem")
+async def redeem_gift(data: GiftRedeemRequest, authorization: str = Header(None)):
+    """Redeem a gift code."""
+    user = await get_current_user(authorization)
+    # Check if gift code exists in cache
+    gift = await db.get_cache_result(0, f"gift_{data.gift_code}")
+    if not gift:
+        raise HTTPException(status_code=404, detail="Invalid or expired gift code")
+    if gift.get('redeemed'):
+        raise HTTPException(status_code=400, detail="Gift code already redeemed")
+
+    # Mark as redeemed
+    gift['redeemed'] = True
+    gift['redeemed_by'] = user['id']
+    gift['redeemed_at'] = datetime.now(UTC).isoformat()
+    await db.save_cache_result(0, f"gift_{data.gift_code}", gift)
+
+    await db.create_notification(
+        user['id'], "gift", "Gift Redeemed! 🎁",
+        f"You've redeemed a gift: {gift.get('product_name', 'InstaBio Gift')}"
+    )
+
+    return {
+        "success": True,
+        "product": gift.get('product_name'),
+        "message": f"Gift redeemed! You now have access to {gift.get('product_name', 'your gift')}."
+    }
+
+
+# ----- Journal Calendar View -----
+
+@app.get("/api/journal/calendar")
+async def get_journal_calendar(authorization: str = Header(None)):
+    """Get journal data formatted for calendar view."""
+    user = await get_current_user(authorization)
+    user_id = user['id']
+
+    if user_id not in _journal_cache:
+        cached = await db.get_cache_result(user_id, "journal")
+        if cached:
+            _journal_cache[user_id] = cached
+        else:
+            return {"success": False, "message": "No journal generated yet."}
+
+    journal = _journal_cache[user_id]
+    entries = journal.get("entries", [])
+
+    # Group entries by year-month for calendar display
+    calendar = {}
+    for entry in entries:
+        date_str = entry.get("date", "")
+        # Try to extract year
+        parts = date_str.split()
+        year = None
+        month = None
+        for p in parts:
+            if p.isdigit() and len(p) == 4:
+                year = int(p)
+            elif p.isdigit():
+                month = p
+
+        key = str(year) if year else "Unknown"
+        if key not in calendar:
+            calendar[key] = []
+        calendar[key].append({
+            "date": date_str,
+            "title": entry.get("title", ""),
+            "preview": (entry.get("content", "") or entry.get("text", ""))[:100],
+        })
+
+    return {
+        "success": True,
+        "calendar": calendar,
+        "total_entries": len(entries)
+    }
+
+
+# ----- Page Routes for New HTML Pages -----
+
+@app.get("/soul")
+async def serve_soul_page():
+    """Serve the Soul chat page."""
+    return FileResponse(STATIC_DIR / "soul.html")
+
+@app.get("/gift")
+async def serve_gift_page():
+    """Serve the gift purchase page."""
+    return FileResponse(STATIC_DIR / "gift.html")
+
+@app.get("/family")
+async def serve_family_page():
+    """Serve the family sharing page."""
+    return FileResponse(STATIC_DIR / "family.html")
+

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2D5016">
     <title>Start Your Story — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
@@ -15,9 +15,10 @@
             --color-primary-light: #3D6B1E;
             --color-background: #FFF8F0;
             --color-white: #FFFFFF;
-            --color-text: #1A1A1A;
-            --color-text-light: #4A4A4A;
+            --color-text: #1B3409;
+            --color-text-light: #3A3A3A;
             --color-error: #B91C1C;
+            --color-text-on-cream: #1B3409;
             --font-body: 20px;
             --font-header: 28px;
             --font-input: 22px;
@@ -86,7 +87,7 @@
             margin-bottom: 12px;
         }
 
-        input {
+        input:not([type="checkbox"]) {
             width: 100%;
             min-height: var(--touch-min);
             padding: 16px 20px;
@@ -97,6 +98,14 @@
             color: var(--color-text);
             -webkit-appearance: none;
             appearance: none;
+        }
+
+        input[type="checkbox"] {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            cursor: pointer;
+            accent-color: var(--color-primary);
         }
 
         input:focus {
@@ -229,6 +238,64 @@
         button:focus {
             outline-offset: 4px;
         }
+
+        /* === MOBILE RESPONSIVE === */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+                max-width: 100%;
+            }
+
+            .step-card {
+                padding: 16px;
+                margin: 8px 0;
+            }
+
+            input:not([type="checkbox"]),
+            select,
+            textarea {
+                width: 100% !important;
+                font-size: 16px !important;
+                /* Prevents iOS auto-zoom */
+                min-height: 44px;
+                box-sizing: border-box;
+            }
+
+            input[type="checkbox"] {
+                width: 32px !important;
+                height: 32px;
+                min-height: 32px;
+                cursor: pointer;
+            }
+
+            button {
+                min-height: 48px;
+                font-size: 16px;
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            h2 {
+                font-size: 18px;
+            }
+
+            .photo-upload {
+                padding: 20px;
+            }
+
+            .progress-steps {
+                gap: 4px;
+            }
+
+            .progress-steps .step {
+                font-size: 12px;
+                padding: 8px;
+                min-width: 30px;
+            }
+        }
     </style>
 </head>
 
@@ -238,59 +305,238 @@
         <div id="form-screen">
             <div class="header">
                 <div class="logo">🌿 InstaBio</div>
-                <h1>Let's get started</h1>
-                <p>Just a few quick things:</p>
+                <h1 id="form-title" data-i18n="onboard.title">Let's get started</h1>
+                <p id="form-subtitle" data-i18n="onboard.subtitle">Just a few quick things:</p>
+            </div>
+
+            <!-- Toggle: Sign Up vs Sign In -->
+            <div style="text-align:center; margin-bottom:20px;">
+                <button id="toggle-signup" onclick="showSignUp()"
+                    style="padding:10px 20px; border:2px solid var(--color-primary); background:var(--color-primary); color:white; border-radius:8px 0 0 8px; font-size:16px; cursor:pointer; font-weight:600;"
+                    data-i18n="onboard.tab.signup">New
+                    Account</button>
+                <button id="toggle-signin" onclick="showSignIn()"
+                    style="padding:10px 20px; border:2px solid var(--color-primary); background:white; color:var(--color-primary); border-radius:0 8px 8px 0; font-size:16px; cursor:pointer; font-weight:600;"
+                    data-i18n="onboard.tab.signin">Sign
+                    In</button>
             </div>
 
             <div class="progress">
                 <span class="progress-dot active"></span>
                 <span class="progress-dot"></span>
                 <span class="progress-dot"></span>
+                <span class="progress-dot"></span>
             </div>
 
             <div id="error-message" class="error hidden"></div>
 
+            <!-- ===== SIGN UP FORM ===== -->
             <form id="onboard-form">
                 <div class="form-group">
-                    <label for="first_name">What's your first name?</label>
+                    <label for="first_name" data-i18n="onboard.label.name">What's your first name?</label>
                     <input type="text" id="first_name" name="first_name" placeholder="Your first name"
-                        autocomplete="given-name" required minlength="1" maxlength="50">
+                        autocomplete="given-name" required minlength="1" maxlength="50"
+                        data-i18n-placeholder="onboard.placeholder.name">
                 </div>
 
                 <div class="form-group">
-                    <label for="birth_year">What year were you born?</label>
+                    <label for="birth_year" data-i18n="onboard.label.year">What year were you born?</label>
                     <input type="number" id="birth_year" name="birth_year" placeholder="1950" autocomplete="bday-year"
                         required min="1900" max="2020">
-                    <p class="hint">This helps us organize your life story</p>
+                    <p class="hint" data-i18n="onboard.hint.year">This helps us organize your life story</p>
                 </div>
 
                 <div class="form-group">
-                    <label for="email">Your email</label>
+                    <label for="email" data-i18n="onboard.label.email">Your email</label>
                     <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email"
                         required>
-                    <p class="hint">So we can save your story safely</p>
+                    <p class="hint" data-i18n="onboard.hint.email">So we can save your story safely</p>
                 </div>
 
-                <button type="submit" class="btn" id="submit-btn">
-                    Continue →
+                <div class="form-group">
+                    <label for="pin" data-i18n="onboard.label.pin">Choose a 4-digit PIN 🔒</label>
+                    <input type="password" id="pin" name="pin" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"
+                        maxlength="4" minlength="4" required autocomplete="new-password"
+                        style="text-align:center; font-size:28px; letter-spacing:12px; max-width:180px;">
+                    <p class="hint" data-i18n="onboard.hint.pin">This protects your story — you'll use it each time you
+                        sign in</p>
+                </div>
+
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label
+                        style="display:flex; align-items:flex-start; gap:12px; font-size:18px; font-weight:400; cursor:pointer;">
+                        <input type="checkbox" id="consent-check" required
+                            style="width:24px; height:24px; min-height:auto; margin-top:4px; accent-color:var(--color-primary);">
+                        <span>I agree to the <a href="#" style="color:var(--color-primary);">Terms of Service</a> and <a
+                                href="#" style="color:var(--color-primary);">Privacy Policy</a>. My recordings will be
+                            used to create my biography.</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn" id="submit-btn" data-i18n="onboard.btn.create">
+                    Create My Account →
                 </button>
             </form>
+
+            <!-- ===== SIGN IN FORM ===== -->
+            <form id="signin-form" style="display:none;">
+                <div class="form-group">
+                    <label for="signin-email" data-i18n="onboard.label.email">Your email</label>
+                    <input type="email" id="signin-email" placeholder="you@example.com" autocomplete="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signin-pin" data-i18n="onboard.label.signinpin">Your 4-digit PIN 🔒</label>
+                    <input type="password" id="signin-pin" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"
+                        maxlength="4" minlength="4" required autocomplete="current-password"
+                        style="text-align:center; font-size:28px; letter-spacing:12px; max-width:180px;">
+                </div>
+
+                <button type="submit" class="btn" id="signin-btn" data-i18n="onboard.btn.signin">
+                    Sign In →
+                </button>
+            </form>
+
+            <!-- ===== SOCIAL LOGINS ===== -->
+            <div style="margin-top:24px; text-align:center;">
+                <div style="position:relative; text-align:center; margin:16px 0;">
+                    <hr style="border:none; border-top:1px solid #ddd;">
+                    <span
+                        style="position:relative; top:-12px; background:var(--color-background); padding:0 16px; color:#999; font-size:14px;"
+                        data-i18n="onboard.social.or">or
+                        continue with</span>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
+                    <button onclick="socialLogin('google')"
+                        style="display:flex; align-items:center; gap:8px; padding:12px 16px; border:2px solid #e5e7eb; border-radius:10px; background:white; cursor:pointer; font-size:15px; font-weight:500; min-height:48px; transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#4285F4'" onmouseout="this.style.borderColor='#e5e7eb'">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path fill="#4285F4"
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+                            <path fill="#34A853"
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05"
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335"
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                        </svg>
+                        Google
+                    </button>
+                    <button onclick="socialLogin('apple')"
+                        style="display:flex; align-items:center; gap:8px; padding:12px 16px; border:2px solid #e5e7eb; border-radius:10px; background:white; cursor:pointer; font-size:15px; font-weight:500; min-height:48px; transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='#e5e7eb'">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path fill="#000"
+                                d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                        </svg>
+                        Apple
+                    </button>
+                    <button onclick="socialLogin('facebook')"
+                        style="display:flex; align-items:center; gap:8px; padding:12px 16px; border:2px solid #e5e7eb; border-radius:10px; background:white; cursor:pointer; font-size:15px; font-weight:500; min-height:48px; transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#1877F2'" onmouseout="this.style.borderColor='#e5e7eb'">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path fill="#1877F2"
+                                d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                        </svg>
+                        Facebook
+                    </button>
+                    <button onclick="socialLogin('tiktok')"
+                        style="display:flex; align-items:center; gap:8px; padding:12px 16px; border:2px solid #e5e7eb; border-radius:10px; background:white; cursor:pointer; font-size:15px; font-weight:500; min-height:48px; transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='#e5e7eb'">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path fill="#25F4EE"
+                                d="M9.37 23.5a7.12 7.12 0 01-7.12-7.12 7.12 7.12 0 017.12-7.12v3.59a3.53 3.53 0 100 7.07 3.53 3.53 0 003.53-3.53V.5h3.4a6.37 6.37 0 005.72 5.72v3.59a9.9 9.9 0 01-5.72-1.84v8.41a7.12 7.12 0 01-6.93 7.12z" />
+                        </svg>
+                        TikTok
+                    </button>
+                    <button onclick="socialLogin('instagram')"
+                        style="display:flex; align-items:center; gap:8px; padding:12px 16px; border:2px solid #e5e7eb; border-radius:10px; background:white; cursor:pointer; font-size:15px; font-weight:500; min-height:48px; transition:all 0.2s;"
+                        onmouseover="this.style.borderColor='#E4405F'" onmouseout="this.style.borderColor='#e5e7eb'">
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path fill="#E4405F"
+                                d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+                        </svg>
+                        Instagram
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <!-- Welcome Screen (shown after registration) -->
+        <!-- Photo Screen (shown after form, before welcome) -->
+        <div id="photo-screen" class="hidden">
+            <div class="header">
+                <div class="logo">🌿 InstaBio</div>
+                <h1 data-i18n="onboard.photo.title">Want to add a photo?</h1>
+                <p data-i18n="onboard.photo.subtitle">This helps us create your avatar later</p>
+            </div>
+            <div style="text-align:center; margin: 40px 0;">
+                <div style="font-size:80px; margin-bottom:24px;">📷</div>
+                <button class="btn" onclick="openCamera()"
+                    style="display:inline-block; width:auto; padding:20px 40px; cursor:pointer; margin-bottom:12px;"
+                    data-i18n="onboard.photo.take">
+                    📷 Take a Photo
+                </button>
+                <br>
+                <label class="btn"
+                    style="display:inline-block; width:auto; padding:16px 32px; cursor:pointer; background: var(--color-primary-light); font-size:18px;"
+                    data-i18n="onboard.photo.gallery">
+                    🖼️ Choose from Gallery
+                    <input type="file" id="photo-gallery" accept="image/*" style="display:none;"
+                        onchange="photoSelected(this)">
+                </label>
+                <div id="photo-preview" style="margin-top:20px; display:none;">
+                    <img id="photo-thumb"
+                        style="width:120px; height:120px; border-radius:50%; object-fit:cover; border:4px solid var(--color-primary);">
+                    <p style="color:var(--color-primary); margin-top:8px;" data-i18n="onboard.photo.great">✅ Looking
+                        great!</p>
+                </div>
+            </div>
+
+            <!-- Camera Modal -->
+            <div id="camera-modal"
+                style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; padding:20px;">
+                <video id="camera-preview" autoplay playsinline
+                    style="width:100%; max-width:400px; border-radius:16px; border:3px solid white;"></video>
+                <canvas id="camera-canvas" style="display:none;"></canvas>
+                <div style="margin-top:20px; display:flex; gap:16px;">
+                    <button onclick="snapPhoto()"
+                        style="padding:16px 40px; font-size:20px; border-radius:50px; background:#4CAF50; color:white; border:none; cursor:pointer; min-height:56px;">
+                        📸 Snap!
+                    </button>
+                    <button onclick="closeCamera()"
+                        style="padding:16px 32px; font-size:18px; border-radius:50px; background:#666; color:white; border:none; cursor:pointer; min-height:56px;">
+                        ✕ Cancel
+                    </button>
+                </div>
+            </div>
+
+            <button class="btn" id="photo-continue-btn" onclick="continueFromPhoto()"
+                data-i18n="onboard.photo.continue">
+                Continue →
+            </button>
+            <button class="btn"
+                style="background:transparent; color:var(--color-text-light); margin-top:12px; font-size:20px;"
+                onclick="skipPhoto()" data-i18n="onboard.photo.skip">
+                Skip for now →
+            </button>
+        </div>
+
+        <!-- Welcome Screen -->
         <div id="welcome-screen" class="hidden">
             <div class="welcome">
                 <div class="welcome-icon">🎙️</div>
-                <h1>Welcome, <span id="user-name">friend</span>!</h1>
-                <p>You're all set. Now just tap the button and start telling your story.</p>
-                <p>Take your time. We're listening.</p>
-                <button class="btn" id="start-recording-btn">
+                <h1><span data-i18n="onboard.welcome.greeting">Welcome,</span> <span id="user-name">friend</span>!</h1>
+                <p data-i18n="onboard.welcome.ready">You're all set. Now just tap the button and start telling your
+                    story.</p>
+                <p data-i18n="onboard.welcome.listen">Take your time. We're listening.</p>
+                <button class="btn" id="start-recording-btn" data-i18n="onboard.welcome.start">
                     Start Recording →
                 </button>
             </div>
         </div>
     </div>
 
+    <script src="/static/i18n.js"></script>
     <script>
         // ===== InstaBio Onboarding =====
 
@@ -298,27 +544,107 @@
 
         // DOM Elements
         const formScreen = document.getElementById('form-screen');
+        const photoScreen = document.getElementById('photo-screen');
         const welcomeScreen = document.getElementById('welcome-screen');
+        let registeredToken = null;
         const form = document.getElementById('onboard-form');
+        const signinForm = document.getElementById('signin-form');
         const errorMessage = document.getElementById('error-message');
         const submitBtn = document.getElementById('submit-btn');
         const startRecordingBtn = document.getElementById('start-recording-btn');
         const userNameSpan = document.getElementById('user-name');
+
+        // Helper: get translated text (falls back to English default)
+        function _t(key, fallback) {
+            return (window.instabioI18n && window.instabioI18n.t) ? instabioI18n.t(key, fallback) : fallback;
+        }
+
+        // ===== Sign Up / Sign In Toggle =====
+        function showSignUp() {
+            document.getElementById('onboard-form').style.display = '';
+            document.getElementById('signin-form').style.display = 'none';
+            document.getElementById('toggle-signup').style.background = 'var(--color-primary)';
+            document.getElementById('toggle-signup').style.color = 'white';
+            document.getElementById('toggle-signin').style.background = 'white';
+            document.getElementById('toggle-signin').style.color = 'var(--color-primary)';
+            document.getElementById('form-title').textContent = _t('onboard.title', "Let's get started");
+            document.getElementById('form-subtitle').textContent = _t('onboard.subtitle', 'Just a few quick things:');
+            errorMessage.classList.add('hidden');
+        }
+        function showSignIn() {
+            document.getElementById('onboard-form').style.display = 'none';
+            document.getElementById('signin-form').style.display = '';
+            document.getElementById('toggle-signin').style.background = 'var(--color-primary)';
+            document.getElementById('toggle-signin').style.color = 'white';
+            document.getElementById('toggle-signup').style.background = 'white';
+            document.getElementById('toggle-signup').style.color = 'var(--color-primary)';
+            document.getElementById('form-title').textContent = _t('onboard.signin.title', 'Welcome back!');
+            document.getElementById('form-subtitle').textContent = _t('onboard.signin.subtitle', 'Sign in with your email and PIN:');
+            errorMessage.classList.add('hidden');
+        }
+
+        // ===== Social Login =====
+        function socialLogin(provider) {
+            const names = { google: 'Google', apple: 'Apple', facebook: 'Facebook', tiktok: 'TikTok', instagram: 'Instagram' };
+            alert(`${names[provider]} login is coming soon! 🚀\n\nFor now, please create an account with your email and a 4-digit PIN.`);
+        }
 
         // Check if already logged in
         const existingToken = localStorage.getItem('instabio_token');
         const existingName = localStorage.getItem('instabio_name');
 
         if (existingToken && existingName) {
-            // Already logged in - show welcome or go to record
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('returning') === 'true') {
-                // Just go to recording
                 window.location.href = '/record';
             }
         }
 
-        // Form submission
+        // ===== Sign In Form Handler =====
+        signinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.classList.add('hidden');
+            const signinBtn = document.getElementById('signin-btn');
+            signinBtn.disabled = true;
+            signinBtn.textContent = 'Signing in...';
+
+            const email = document.getElementById('signin-email').value.trim().toLowerCase();
+            const pin = document.getElementById('signin-pin').value.trim();
+
+            if (!email || !email.includes('@')) {
+                showError('Please enter your email address');
+                signinBtn.disabled = false;
+                signinBtn.textContent = 'Sign In →';
+                return;
+            }
+            if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                showError('Please enter your 4-digit PIN');
+                signinBtn.disabled = false;
+                signinBtn.textContent = 'Sign In →';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ first_name: '', birth_year: 2000, email: email, pin: pin, is_signin: true })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Sign in failed');
+
+                localStorage.setItem('instabio_token', data.token);
+                localStorage.setItem('instabio_name', data.first_name);
+                localStorage.setItem('instabio_user_id', data.user_id);
+                window.location.href = '/record';
+            } catch (err) {
+                showError(err.message);
+                signinBtn.disabled = false;
+                signinBtn.textContent = 'Sign In →';
+            }
+        });
+
+        // ===== Registration Form Handler =====
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -327,10 +653,12 @@
             submitBtn.disabled = true;
             submitBtn.textContent = 'Please wait...';
 
+            const pin = document.getElementById('pin').value.trim();
             const formData = {
                 first_name: document.getElementById('first_name').value.trim(),
                 birth_year: parseInt(document.getElementById('birth_year').value),
-                email: document.getElementById('email').value.trim().toLowerCase()
+                email: document.getElementById('email').value.trim().toLowerCase(),
+                pin: pin
             };
 
             // Validation
@@ -349,6 +677,11 @@
                 return;
             }
 
+            if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                showError('Please choose a 4-digit PIN (numbers only)');
+                return;
+            }
+
             try {
                 const response = await fetch(`${API_URL}/register`, {
                     method: 'POST',
@@ -361,6 +694,21 @@
                 const data = await response.json();
 
                 if (!response.ok) {
+                    // Detect duplicate email — show persistent message, don't auto-switch
+                    if (response.status === 409) {
+                        errorMessage.innerHTML = '<div style="background:#D1FAE5; color:#166534; padding:20px; border-radius:12px; font-size:17px; line-height:1.6; border:2px solid #86EFAC;">' +
+                            '🌿 <strong>You already have an InstaBio account!</strong><br><br>' +
+                            'No need to create a new one — all your recordings are safe in your existing account.<br><br>' +
+                            '👉 <a href="#" onclick="showSignIn(); return false;" style="color:#166534; font-weight:bold; text-decoration:underline; font-size:18px;">Sign In here</a> with your email and PIN.' +
+                            '</div>';
+                        errorMessage.classList.remove('hidden');
+                        errorMessage.style.background = 'none';
+                        errorMessage.style.border = 'none';
+                        errorMessage.style.padding = '0';
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Create My Account →';
+                        return;
+                    }
                     throw new Error(data.detail || 'Registration failed');
                 }
 
@@ -369,10 +717,26 @@
                 localStorage.setItem('instabio_name', data.first_name);
                 localStorage.setItem('instabio_user_id', data.user_id);
 
-                // Show welcome screen
+                // Save consent (Tier 0: account creation)
+                try {
+                    await fetch(`${API_URL}/consent`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.token}` },
+                        body: JSON.stringify({ tier: 0, accepted: true })
+                    });
+                    // Auto-accept recording consent (Tier 1)
+                    await fetch(`${API_URL}/consent`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.token}` },
+                        body: JSON.stringify({ tier: 1, accepted: true })
+                    });
+                } catch (ce) { /* consent save is best-effort */ }
+
+                // Show photo screen
+                registeredToken = data.token;
                 userNameSpan.textContent = data.first_name;
                 formScreen.classList.add('hidden');
-                welcomeScreen.classList.remove('hidden');
+                photoScreen.classList.remove('hidden');
 
             } catch (err) {
                 showError(err.message || 'Something went wrong. Please try again.');
@@ -386,10 +750,10 @@
 
         // Show error
         function showError(message) {
-            errorMessage.textContent = message;
+            errorMessage.innerHTML = message;
             errorMessage.classList.remove('hidden');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Continue →';
+            submitBtn.textContent = 'Create My Account →';
         }
 
         // Update progress dots as user fills form
@@ -405,6 +769,87 @@
                 }
             });
         });
+
+        // ===== Photo Screen Functions =====
+        let cameraStream = null;
+        let capturedPhotoBlob = null;
+
+        async function openCamera() {
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-preview');
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+                video.srcObject = cameraStream;
+                modal.style.display = 'flex';
+            } catch (err) {
+                alert('Could not access camera. Please use "Choose from Gallery" instead.\n\nError: ' + err.message);
+            }
+        }
+
+        function snapPhoto() {
+            const video = document.getElementById('camera-preview');
+            const canvas = document.getElementById('camera-canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            document.getElementById('photo-thumb').src = dataUrl;
+            document.getElementById('photo-preview').style.display = 'block';
+            canvas.toBlob((blob) => { capturedPhotoBlob = blob; }, 'image/jpeg', 0.85);
+            closeCamera();
+        }
+
+        function closeCamera() {
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-preview');
+            modal.style.display = 'none';
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+            }
+            video.srcObject = null;
+        }
+
+        function photoSelected(input) {
+            if (input.files && input.files[0]) {
+                capturedPhotoBlob = null;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('photo-thumb').src = e.target.result;
+                    document.getElementById('photo-preview').style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function continueFromPhoto() {
+            const galleryInput = document.getElementById('photo-gallery');
+            const photoFile = capturedPhotoBlob
+                || (galleryInput?.files?.length > 0 ? galleryInput.files[0] : null);
+            const token = registeredToken || localStorage.getItem('instabio_token');
+
+            if (photoFile && token) {
+                try {
+                    const photoForm = new FormData();
+                    photoForm.append('photo', photoFile, 'photo.jpg');
+                    await fetch(`${API_URL}/photos/upload`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: photoForm
+                    });
+                } catch (e) { /* photo upload is best-effort */ }
+            }
+            photoScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+        }
+
+        function skipPhoto() {
+            photoScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+        }
     </script>
 </body>
 

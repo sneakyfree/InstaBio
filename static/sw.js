@@ -3,7 +3,7 @@
  * Enables offline capability and "Add to Home Screen"
  */
 
-const CACHE_NAME = 'instabio-v2';
+const CACHE_NAME = 'instabio-v4';
 const STATIC_ASSETS = [
     '/',
     '/onboard',
@@ -12,6 +12,12 @@ const STATIC_ASSETS = [
     '/biography',
     '/journal',
     '/progress',
+    '/soul',
+    '/gift',
+    '/family',
+    '/pricing',
+    '/tv',
+    '/consent',
     '/static/index.html',
     '/static/onboard.html',
     '/static/record.html',
@@ -19,6 +25,13 @@ const STATIC_ASSETS = [
     '/static/biography.html',
     '/static/journal.html',
     '/static/progress.html',
+    '/static/soul.html',
+    '/static/gift.html',
+    '/static/family.html',
+    '/static/pricing.html',
+    '/static/tv.html',
+    '/static/consent.html',
+    '/static/i18n.js',
     '/static/shared.js',
     '/manifest.json'
 ];
@@ -118,9 +131,66 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('sync', (event) => {
     if (event.tag === 'upload-audio-chunks') {
         console.log('[SW] Background sync: uploading queued audio chunks');
-        // The main app handles the actual upload via IndexedDB queue
+        event.waitUntil(uploadQueuedChunks());
     }
 });
+
+// Offline upload queue using IndexedDB
+async function uploadQueuedChunks() {
+    try {
+        const db = await openDB();
+        const tx = db.transaction('offlineQueue', 'readonly');
+        const store = tx.objectStore('offlineQueue');
+        const items = await getAllFromStore(store);
+        tx.oncomplete = () => db.close();
+
+        for (const item of items) {
+            try {
+                const formData = new FormData();
+                formData.append('audio', item.blob, item.filename);
+
+                const resp = await fetch(`/api/session/${item.sessionUuid}/chunk`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${item.token}` },
+                    body: formData
+                });
+
+                if (resp.ok) {
+                    // Remove from queue on success
+                    const delTx = (await openDB()).transaction('offlineQueue', 'readwrite');
+                    delTx.objectStore('offlineQueue').delete(item.id);
+                    console.log(`[SW] Uploaded queued chunk ${item.id}`);
+                }
+            } catch (e) {
+                console.warn(`[SW] Failed to upload chunk ${item.id}, will retry`, e);
+            }
+        }
+    } catch (e) {
+        console.error('[SW] Offline queue error:', e);
+    }
+}
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open('instabio-offline', 1);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('offlineQueue')) {
+                db.createObjectStore('offlineQueue', { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = (e) => reject(e.target.error);
+    });
+}
+
+function getAllFromStore(store) {
+    return new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
 
 // Push notifications (for future use)
 self.addEventListener('push', (event) => {

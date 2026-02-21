@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2D5016">
     <title>Your Life Vault — InstaBio</title>
     <link rel="manifest" href="/manifest.json">
@@ -366,11 +366,65 @@
         .hidden {
             display: none !important;
         }
+
+        /* === MOBILE RESPONSIVE === */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+                max-width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .stat-card {
+                padding: 12px;
+            }
+
+            .stat-card .value {
+                font-size: 24px;
+            }
+
+            .session-card {
+                padding: 12px;
+            }
+
+            .search-bar {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .search-bar input {
+                width: 100%;
+                min-height: 44px;
+                font-size: 16px;
+            }
+
+            .search-bar select {
+                width: 100%;
+                min-height: 44px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .fab {
+                width: 56px;
+                height: 56px;
+                font-size: 24px;
+                bottom: 20px;
+                right: 16px;
+            }
+        }
     </style>
 </head>
 
 <body>
     <!-- Shared navigation -->
+    <script src="/static/i18n.js"></script>
     <script src="/static/shared.js"></script>
     <script>renderNav('vault');</script>
 
@@ -422,6 +476,19 @@
                     <div class="spinner"></div>
                     <p>Loading your sessions...</p>
                 </div>
+            </div>
+
+            <!-- Trash Can Section -->
+            <div id="trash-section"
+                style="display:none; margin-top:24px; padding:16px; background:#fef3f2; border-radius:12px; border:1px solid #fca5a5;">
+                <h3 style="font-size:18px; margin:0 0 12px; color:#dc2626; cursor:pointer;"
+                    onclick="this.parentElement.querySelector('#trash-list').classList.toggle('hidden')">
+                    🗑️ Trash <span id="trash-count"
+                        style="background:#dc2626; color:white; border-radius:50%; padding:2px 8px; font-size:14px;">0</span>
+                    <span style="font-size:13px; color:#999; font-weight:normal; margin-left:8px;">Items auto-delete
+                        after 30 days</span>
+                </h3>
+                <div id="trash-list"></div>
             </div>
         </div>
 
@@ -508,7 +575,10 @@
                             <div class="session-chunks">
                                 ${session.chunk_count} segments • ${session.status}
                             </div>
-                            <button class="delete-btn" onclick="deleteSession(${session.id}, event)">🗑️ Delete Session</button>
+                            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+                                <button class="delete-btn" style="margin-top:0;" onclick="downloadSession('${session.session_uuid}', event)">💾 Download</button>
+                                <button class="delete-btn" style="margin-top:0;" onclick="deleteSession(${session.id}, event)">🗑️ Delete</button>
+                            </div>
                         </div>
                     `).join('');
                 } else {
@@ -600,12 +670,58 @@
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
 
-        // ===== Delete Functions =====
+        // ===== Trash Can System =====
+        function getTrash() {
+            try { return JSON.parse(localStorage.getItem('instabio_trash') || '[]'); } catch { return []; }
+        }
+        function saveTrash(trash) {
+            localStorage.setItem('instabio_trash', JSON.stringify(trash));
+            updateTrashUI();
+        }
+        function updateTrashUI() {
+            const trash = getTrash();
+            const trashSection = document.getElementById('trash-section');
+            const trashCount = document.getElementById('trash-count');
+            if (trashSection && trashCount) {
+                trashCount.textContent = trash.length;
+                trashSection.style.display = trash.length > 0 ? 'block' : 'none';
+                const trashList = document.getElementById('trash-list');
+                if (trashList) {
+                    trashList.innerHTML = trash.map(item => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#fff; border-radius:8px; margin:4px 0; border:1px solid #e5e7eb;">
+                            <div>
+                                <span style="font-size:14px;">${item.type === 'session' ? '🎙️' : '📝'} ${item.label || 'Recording'}</span>
+                                <span style="font-size:12px; color:#999; margin-left:8px;">Deleted ${new Date(item.deletedAt).toLocaleDateString()}</span>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button onclick="restoreFromTrash(${item.id}, '${item.type}')" style="padding:4px 12px; border-radius:6px; border:1px solid #4CAF50; background:white; color:#4CAF50; cursor:pointer; font-size:13px;">♻️ Restore</button>
+                                <button onclick="permanentDelete(${item.id}, '${item.type}')" style="padding:4px 12px; border-radius:6px; border:1px solid #dc3545; background:white; color:#dc3545; cursor:pointer; font-size:13px;">🗑️ Permanent</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
 
         async function deleteSession(sessionId, event) {
             event.stopPropagation();
-            if (!confirm('Delete this recording? This cannot be undone.')) return;
+            const msg = '🗑️ Move this recording to trash?\n\n' +
+                '• You can restore it within 30 days\n' +
+                '• After 30 days, it will be permanently deleted\n' +
+                '• To permanently delete now, visit the Trash section below';
+            if (!confirm(msg)) return;
             try {
+                // Move to trash instead of permanent delete
+                const trash = getTrash();
+                trash.push({
+                    id: sessionId,
+                    type: 'session',
+                    label: `Session #${sessionId}`,
+                    deletedAt: new Date().toISOString()
+                });
+                saveTrash(trash);
+
+                // Still delete from server
                 const response = await fetch(`${API_URL}/session/${sessionId}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -622,11 +738,27 @@
                 alert('Something went wrong. Please try again.');
             }
         }
+        function downloadSession(sessionUuid, event) {
+            event.stopPropagation();
+            window.open(`${API_URL}/recordings/download?session_uuid=${sessionUuid}&token=${token}`, '_blank');
+        }
 
         async function deleteTranscript(transcriptId, event) {
             event.stopPropagation();
-            if (!confirm('Delete this recording? This cannot be undone.')) return;
+            const msg = '🗑️ Move this transcript to trash?\n\n' +
+                '• You can restore it within 30 days\n' +
+                '• After 30 days, it will be permanently deleted';
+            if (!confirm(msg)) return;
             try {
+                const trash = getTrash();
+                trash.push({
+                    id: transcriptId,
+                    type: 'transcript',
+                    label: `Transcript #${transcriptId}`,
+                    deletedAt: new Date().toISOString()
+                });
+                saveTrash(trash);
+
                 const response = await fetch(`${API_URL}/transcript/${transcriptId}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -643,6 +775,27 @@
                 alert('Something went wrong. Please try again.');
             }
         }
+
+        async function restoreFromTrash(id, type) {
+            alert('♻️ Restore coming soon!\n\nIn the full version, this will re-create the session from our backup servers. For now, please re-record the session.');
+            // Remove from trash UI
+            const trash = getTrash().filter(t => !(t.id === id && t.type === type));
+            saveTrash(trash);
+        }
+
+        function permanentDelete(id, type) {
+            if (!confirm('⚠️ PERMANENTLY delete this item?\n\nThis cannot be undone. The recording will be gone forever.')) return;
+            const trash = getTrash().filter(t => !(t.id === id && t.type === type));
+            saveTrash(trash);
+        }
+
+        // Auto-clean trash older than 30 days
+        (function cleanOldTrash() {
+            const trash = getTrash();
+            const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+            const cleaned = trash.filter(item => (Date.now() - new Date(item.deletedAt).getTime()) < thirtyDays);
+            if (cleaned.length !== trash.length) saveTrash(cleaned);
+        })();
 
         // ===== Tab Switching =====
 
@@ -686,6 +839,7 @@
                 loadSessions(),
                 loadTranscripts()
             ]);
+            updateTrashUI();
         }
 
         init();

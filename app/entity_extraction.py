@@ -390,7 +390,7 @@ async def build_timeline(
     return timeline
 
 
-def extract_entities(text: str) -> Dict[str, list]:
+def extract_entities_quick(text: str) -> Dict[str, list]:
     """
     Lightweight regex-based entity extraction.
     Works without LLM — useful as a fallback or quick scan.

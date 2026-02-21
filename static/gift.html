@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2D5016">
+    <title>Give the Gift of Story — InstaBio</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        :root {
+            --color-primary: #2D5016;
+            --color-primary-light: #3D6B1E;
+            --color-background: #FFF8F0;
+            --color-white: #FFFFFF;
+            --color-text: #1A1A1A;
+            --color-text-light: #4A4A4A;
+            --color-cream: #F5EDE0;
+            --color-gold: #D97706;
+            --radius: 16px;
+            --touch-min: 64px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 20px;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-background);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .page-header h1 {
+            font-size: 36px;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: var(--color-text-light);
+            font-size: 18px;
+        }
+
+        /* Gift Cards */
+        .gifts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .gift-card {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 32px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gift-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-gold));
+        }
+
+        .gift-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .gift-card.selected {
+            border-color: var(--color-primary);
+            background: rgba(45, 80, 22, 0.03);
+        }
+
+        .gift-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+
+        .gift-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        }
+
+        .gift-price {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--color-gold);
+            margin-bottom: 12px;
+        }
+
+        .gift-desc {
+            color: var(--color-text-light);
+            font-size: 16px;
+        }
+
+        .gift-features {
+            text-align: left;
+            margin-top: 16px;
+            font-size: 16px;
+        }
+
+        .gift-features li {
+            padding: 4px 0;
+            list-style: none;
+        }
+
+        .gift-features li::before {
+            content: '✅ ';
+        }
+
+        /* Recipient Form */
+        .recipient-form {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 32px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .form-title {
+            font-size: 24px;
+            color: var(--color-primary);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--color-text);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            border: 2px solid var(--color-cream);
+            border-radius: 12px;
+            background: var(--color-background);
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: var(--touch-min);
+            padding: 16px 36px;
+            font-size: 22px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: var(--color-white);
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-light);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: default;
+        }
+
+        /* Redeem Section */
+        .redeem-section {
+            background: var(--color-white);
+            border-radius: var(--radius);
+            padding: 32px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .redeem-title {
+            font-size: 22px;
+            color: var(--color-primary);
+            margin-bottom: 16px;
+        }
+
+        .redeem-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .redeem-row input {
+            flex: 1;
+        }
+
+        .success-msg {
+            background: #ECFDF5;
+            color: #065F46;
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 16px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .error-msg {
+            background: #FEF2F2;
+            color: #991B1B;
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 16px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* === MOBILE RESPONSIVE === */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+                max-width: 100%;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .product-card {
+                padding: 16px;
+            }
+
+            .product-card h3 {
+                font-size: 18px;
+            }
+
+            .product-card .price {
+                font-size: 24px;
+            }
+
+            .redeem-form {
+                padding: 16px;
+            }
+
+            .redeem-form input {
+                width: 100%;
+                font-size: 16px;
+                /* Prevents iOS auto-zoom */
+                min-height: 44px;
+                box-sizing: border-box;
+            }
+
+            .redeem-form button {
+                min-height: 48px;
+                font-size: 16px;
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script src="/static/i18n.js"></script>
+    <script src="/static/shared.js"></script>
+    <script>renderNav('gift');</script>
+
+    <div class="container">
+        <header class="page-header">
+            <h1>🎁 Give the Gift of Story</h1>
+            <p>Help someone preserve their life story forever</p>
+        </header>
+
+        <!-- Gift Options -->
+        <div class="gifts-grid">
+            <div class="gift-card" onclick="selectGift('gift_biography')" id="card-gift_biography">
+                <div class="gift-icon">📖</div>
+                <div class="gift-name">Biography Package</div>
+                <div class="gift-price">$149</div>
+                <div class="gift-desc">A beautifully crafted life story</div>
+                <ul class="gift-features">
+                    <li>AI-generated biography</li>
+                    <li>3 writing styles</li>
+                    <li>Audio citations</li>
+                    <li>Shareable web viewer</li>
+                </ul>
+            </div>
+            <div class="gift-card" onclick="selectGift('gift_full')" id="card-gift_full">
+                <div class="gift-icon">🎁</div>
+                <div class="gift-name">Legacy Box</div>
+                <div class="gift-price">$399</div>
+                <div class="gift-desc">The complete legacy experience</div>
+                <ul class="gift-features">
+                    <li>Everything in Biography</li>
+                    <li>Voice clone</li>
+                    <li>Interactive Soul AI</li>
+                    <li>Life journal</li>
+                    <li>Family sharing portal</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Recipient Form -->
+        <div class="recipient-form hidden" id="recipient-form">
+            <h2 class="form-title">🎀 Who is this gift for?</h2>
+            <div class="form-group">
+                <label for="recipient-name">Recipient's Name</label>
+                <input type="text" id="recipient-name" placeholder="e.g., Grandpa Joe">
+            </div>
+            <div class="form-group">
+                <label for="gift-message">Personal Message (optional)</label>
+                <textarea id="gift-message" rows="3" placeholder="Your story matters to us..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="purchase-btn" onclick="purchaseGift()">
+                🎁 Purchase Gift
+            </button>
+            <div id="purchase-result"></div>
+        </div>
+
+        <!-- Divider -->
+        <hr style="border: 1px solid var(--color-cream); margin: 40px 0;">
+
+        <!-- Redeem Section -->
+        <div class="redeem-section">
+            <h2 class="redeem-title">🎟️ Have a Gift Code?</h2>
+            <p style="color: var(--color-text-light); margin-bottom: 16px;">Enter your code below to unlock your gift.
+            </p>
+            <div class="redeem-row">
+                <input type="text" id="redeem-code" placeholder="Enter gift code"
+                    style="padding:16px; font-size:18px; border:2px solid var(--color-cream); border-radius:12px;">
+                <button class="btn btn-primary" style="width:auto; padding:16px 24px;"
+                    onclick="redeemGift()">Redeem</button>
+            </div>
+            <div id="redeem-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('instabio_token');
+        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+        let selectedProduct = null;
+
+        function selectGift(productId) {
+            selectedProduct = productId;
+            document.querySelectorAll('.gift-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`card-${productId}`).classList.add('selected');
+            document.getElementById('recipient-form').classList.remove('hidden');
+        }
+
+        async function purchaseGift() {
+            if (!selectedProduct) return;
+            const btn = document.getElementById('purchase-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Processing...';
+
+            try {
+                const resp = await fetch('/api/checkout', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ product_id: selectedProduct })
+                });
+                const data = await resp.json();
+
+                if (data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else if (data.status === 'unavailable') {
+                    document.getElementById('purchase-result').innerHTML =
+                        '<div class="error-msg">⚠️ Payment processing is not configured yet. Gift codes will be available soon!</div>';
+                } else {
+                    document.getElementById('purchase-result').innerHTML =
+                        `<div class="success-msg">✅ Gift purchased! Code: <strong>${data.gift_code || 'Processing...'}</strong></div>`;
+                }
+            } catch (e) {
+                document.getElementById('purchase-result').innerHTML =
+                    '<div class="error-msg">⚠️ Connection error. Please try again.</div>';
+            }
+            btn.disabled = false;
+            btn.textContent = '🎁 Purchase Gift';
+        }
+
+        async function redeemGift() {
+            const code = document.getElementById('redeem-code').value.trim();
+            if (!code) return;
+
+            try {
+                const resp = await fetch('/api/gift/redeem', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ gift_code: code })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    document.getElementById('redeem-result').innerHTML =
+                        `<div class="success-msg">🎉 ${escapeHtml(data.message)}</div>`;
+                } else {
+                    document.getElementById('redeem-result').innerHTML =
+                        `<div class="error-msg">❌ ${escapeHtml(data.detail || data.message || 'Invalid code')}</div>`;
+                }
+            } catch (e) {
+                document.getElementById('redeem-result').innerHTML =
+                    '<div class="error-msg">⚠️ Connection error. Please try again.</div>';
+            }
+        }
+    </script>
+</body>
+
+</html>

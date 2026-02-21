@@ -1,6 +1,7 @@
 """
-InstaBio Avatar Status Module
+InstaBio Avatar Status & Generation Module
 Tracks avatar readiness based on photos and video recordings.
+Integrates with Veron's SadTalker API for Tier 1 lip-sync generation.
 
 Avatar Tiers:
 - No photos: "Upload a photo to get started" (0%)
@@ -10,12 +11,21 @@ Avatar Tiers:
 - 10+ hours video: Tier 3 — High-fidelity digital twin (95%)
 """
 
+import os
+import logging
 from dataclasses import dataclass
 from typing import Optional, List
 from pathlib import Path
 
+import httpx
+
+logger = logging.getLogger(__name__)
+
 # Photo directory
 PHOTOS_DIR = Path(__file__).parent.parent / "data" / "photos"
+
+# Veron API for SadTalker avatar generation
+VERON_AVATAR_API = os.environ.get("VERON_AVATAR_API", "http://24.11.183.106:8100")
 
 
 @dataclass
@@ -196,22 +206,111 @@ async def save_user_photo(user_id: int, filename: str, content: bytes) -> dict:
     }
 
 
-# ----- Placeholder for avatar generation -----
+# ----- Avatar Generation via Veron SadTalker -----
+
+async def _check_veron_avatar_available() -> bool:
+    """Check if Veron's SadTalker API is reachable."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{VERON_AVATAR_API}/health")
+            return resp.status_code == 200
+    except Exception:
+        return False
+
 
 async def generate_avatar(user_id: int, photos: list, video_hours: float) -> dict:
     """
-    Placeholder for avatar generation.
-    
-    In production, this would:
-    1. Process photos with SadTalker/LivePortrait (Tier 1)
-    2. Process video with HeyGen/Hedra (Tier 2)
-    3. Create high-fidelity model (Tier 3)
-    
-    For now, returns a mock response.
+    Generate a talking-head avatar using Veron's SadTalker API.
+
+    Tier 1 (1 photo): Send photo to SadTalker, get lip-synced animation.
+    Tier 2+ (video): Send multiple frames for richer output.
+
+    Args:
+        user_id:  Numeric user ID.
+        photos:   List of photo file paths on disk.
+        video_hours: Total video recording hours (for tier selection).
+
+    Returns:
+        dict with ``status``, ``video_url``, and ``message``.
     """
-    return {
-        "status": "pending",
-        "message": "Avatar generation coming soon! We're integrating advanced video synthesis.",
-        "estimated_tier": "Depends on your photos and videos",
-        "api_ready": False,
-    }
+    if not photos:
+        return {
+            "status": "error",
+            "message": "Upload at least one photo before generating an avatar.",
+            "video_url": None,
+            "api_ready": False,
+        }
+
+    # Check Veron availability
+    veron_up = await _check_veron_avatar_available()
+    if not veron_up:
+        logger.warning("Veron SadTalker API is offline — avatar generation unavailable")
+        return {
+            "status": "unavailable",
+            "message": (
+                "The avatar generation server (Veron) is currently offline. "
+                "Please try again later."
+            ),
+            "video_url": None,
+            "api_ready": False,
+        }
+
+    # Pick the best photo (first one for now)
+    photo_path = photos[0]
+    try:
+        with open(photo_path, "rb") as f:
+            photo_bytes = f.read()
+    except OSError as exc:
+        logger.error("Cannot read photo %s: %s", photo_path, exc)
+        return {
+            "status": "error",
+            "message": "Could not read the selected photo file.",
+            "video_url": None,
+            "api_ready": True,
+        }
+
+    # Call SadTalker to generate a base animated portrait
+    try:
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            resp = await client.post(
+                f"{VERON_AVATAR_API}/generate",
+                files={"image": (os.path.basename(photo_path), photo_bytes, "image/jpeg")},
+                data={"user_id": str(user_id), "mode": "portrait"},
+            )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            video_url = data.get("video_url")
+            logger.info("Avatar generated for user %d: %s", user_id, video_url)
+            return {
+                "status": "ready",
+                "message": "Your avatar has been created!",
+                "video_url": video_url,
+                "api_ready": True,
+            }
+        else:
+            error_detail = resp.text[:300]
+            logger.error("SadTalker generation failed (%d): %s", resp.status_code, error_detail)
+            return {
+                "status": "error",
+                "message": f"Avatar generation returned an error (HTTP {resp.status_code}).",
+                "video_url": None,
+                "api_ready": True,
+            }
+
+    except httpx.TimeoutException:
+        logger.error("SadTalker generation timed out for user %d", user_id)
+        return {
+            "status": "error",
+            "message": "Avatar generation took too long. Please try again later.",
+            "video_url": None,
+            "api_ready": True,
+        }
+    except Exception as exc:
+        logger.error("Avatar generation error for user %d: %s", user_id, exc)
+        return {
+            "status": "error",
+            "message": "An unexpected error occurred while creating your avatar.",
+            "video_url": None,
+            "api_ready": True,
+        }

@@ -20,11 +20,11 @@ function escapeHtml(str) {
  * Redirects to /onboard if no token is found (except on public pages).
  */
 (function authGuard() {
-    const publicPaths = ['/', '/onboard', '/index.html'];
+    const publicPaths = ['/', '/onboard', '/index.html', '/share'];
     const path = window.location.pathname;
     const token = localStorage.getItem('instabio_token');
 
-    if (!token && !publicPaths.includes(path)) {
+    if (!token && !publicPaths.includes(path) && !path.startsWith('/share/')) {
         window.location.href = '/onboard';
     }
 })();
@@ -32,15 +32,17 @@ function escapeHtml(str) {
 /**
  * P2: Shared navigation bar with logout.
  * Call renderNav('pageName') to insert the nav bar at the top of the page.
- * pageName should be one of: 'record', 'vault', 'biography', 'journal', 'progress'
  */
 function renderNav(activePage) {
     const pages = [
-        { id: 'record', label: '🎙️ Record', href: '/record' },
-        { id: 'vault', label: '📁 Vault', href: '/vault' },
-        { id: 'biography', label: '📖 Biography', href: '/biography' },
-        { id: 'journal', label: '📓 Journal', href: '/journal' },
-        { id: 'progress', label: '📊 Progress', href: '/progress' },
+        { id: 'record', label: '🎙️ Record', i18nKey: 'nav.record', href: '/record' },
+        { id: 'vault', label: '📁 Vault', i18nKey: 'nav.vault', href: '/vault' },
+        { id: 'biography', label: '📖 Biography', i18nKey: 'nav.biography', href: '/biography' },
+        { id: 'journal', label: '📓 Journal', i18nKey: 'nav.journal', href: '/journal' },
+        { id: 'soul', label: '🕊️ Soul', i18nKey: 'nav.soul', href: '/soul' },
+        { id: 'progress', label: '📊 Progress', i18nKey: 'nav.progress', href: '/progress' },
+        { id: 'family', label: '👨‍👩‍👧 Family', i18nKey: 'nav.family', href: '/family' },
+        { id: 'pricing', label: '💰 Pricing', i18nKey: 'nav.pricing', href: '/pricing' },
     ];
 
     const userName = localStorage.getItem('instabio_name') || '';
@@ -76,11 +78,14 @@ function renderNav(activePage) {
             #instabio-nav .nav-link {
                 color: rgba(255,255,255,0.85);
                 text-decoration: none;
-                padding: 8px 12px;
+                padding: 12px 16px;
                 border-radius: 8px;
                 font-size: 16px;
                 transition: background 0.2s;
                 white-space: nowrap;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
             }
             #instabio-nav .nav-link:hover {
                 background: rgba(255,255,255,0.15);
@@ -94,21 +99,77 @@ function renderNav(activePage) {
                 color: rgba(255,255,255,0.7);
                 background: none;
                 border: 1px solid rgba(255,255,255,0.3);
-                padding: 8px 14px;
+                padding: 12px 16px;
                 border-radius: 8px;
                 font-size: 15px;
                 cursor: pointer;
                 transition: all 0.2s;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
             }
             #instabio-nav .nav-logout:hover {
                 background: rgba(255,255,255,0.15);
                 color: white;
             }
+            #instabio-nav .nav-lang-select {
+                background: rgba(255,255,255,0.15);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.35);
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-size: 15px;
+                cursor: pointer;
+                min-height: 44px;
+                appearance: none;
+                -webkit-appearance: none;
+                transition: all 0.2s;
+            }
+            #instabio-nav .nav-lang-select:hover,
+            #instabio-nav .nav-lang-select:focus {
+                background: rgba(255,255,255,0.25);
+            }
+            #instabio-nav .nav-lang-select option {
+                color: #1A1A1A;
+                background: white;
+            }
+            @media (max-width: 600px) {
+                #instabio-nav {
+                    padding: 8px 12px;
+                    gap: 4px;
+                }
+                #instabio-nav .nav-brand {
+                    font-size: 18px;
+                    width: 100%;
+                    text-align: center;
+                    padding-bottom: 4px;
+                }
+                #instabio-nav .nav-links {
+                    justify-content: center;
+                    gap: 2px;
+                }
+                #instabio-nav .nav-link {
+                    padding: 10px 10px;
+                    font-size: 13px;
+                    min-height: 44px;
+                }
+                #instabio-nav .nav-logout {
+                    padding: 10px 12px;
+                    font-size: 13px;
+                    min-height: 44px;
+                }
+                #instabio-nav .nav-lang-select {
+                    padding: 8px 10px;
+                    font-size: 13px;
+                    min-height: 44px;
+                }
+            }
         </style>
         <a href="/" class="nav-brand">🌿 InstaBio</a>
         <div class="nav-links">
-            ${pages.map(p => `<a href="${p.href}" class="nav-link${p.id === activePage ? ' active' : ''}">${p.label}</a>`).join('')}
-            <button class="nav-logout" onclick="instabioLogout()" title="Sign out">Sign Out</button>
+            ${pages.map(p => `<a href="${p.href}" class="nav-link${p.id === activePage ? ' active' : ''}" data-i18n="${p.i18nKey}">${p.label}</a>`).join('')}
+            <button class="nav-logout" onclick="instabioLogout()" title="Sign out" data-i18n="nav.signout">Sign Out</button>
+            <span id="nav-lang-slot"></span>
         </div>
     `;
 
@@ -124,6 +185,27 @@ function renderNav(activePage) {
             link.classList.remove('active');
         }
     });
+
+    // Insert language selector into nav bar (if i18n.js is loaded)
+    function insertNavLangSelector() {
+        if (window.instabioI18n) {
+            const slot = document.getElementById('nav-lang-slot');
+            if (slot && !slot.querySelector('select')) {
+                const sel = instabioI18n.createLangSelector('');
+                sel.classList.add('nav-lang-select');
+                // Remove default inline styles from createLangSelector, use nav CSS instead
+                sel.style.cssText = '';
+                slot.appendChild(sel);
+            }
+            // Apply translations to newly-inserted nav elements
+            if (window.instabioI18n.applyTranslations) {
+                instabioI18n.applyTranslations();
+            }
+        } else {
+            setTimeout(insertNavLangSelector, 100);
+        }
+    }
+    insertNavLangSelector();
 }
 
 /**
